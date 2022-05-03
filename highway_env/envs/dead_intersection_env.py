@@ -23,16 +23,6 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
     }
     ACTIONS_INDEXES = {v: k for k, v in ACTIONS.items()}
 
-    # For env with GrayscaleObservation, the env need
-    # this GOAL_OBS to calculate the reward and the info.
-    # This is the same obs as PARKING_OBS from parking_env.py, with another name.
-    GOAL_OBS = {"observation": {
-        "type": "KinematicsGoal",
-        "features": ['x', 'y', 'vx', 'vy', 'cos_h', 'sin_h'],
-        "scales": [100, 100, 5, 5, 1, 1],
-        "normalize": False
-    }}
-
     @classmethod
     def default_config(cls) -> dict:
         config = super().default_config()
@@ -40,9 +30,10 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
             "observation": {
                 "type": "MultiAgentObservation",
                 "observation_config": {
-                    "type": "KinematicsGoalObservation",
+                    "type": "KinematicsGoal",
                     "vehicles_count": 15,
                     "features": ["presence", "x", "y", "vx", "vy", "cos_h", "sin_h"],
+                    "goal_features": ["x", "y", "vx", "vy", "cos_h", "sin_h"],
                     "scales": [100, 100, 5, 5, 1, 1],
                     "normalize": False,
                     "features_range": {
@@ -67,7 +58,7 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
             },
             "reward_weights": [1, 0.3, 0, 0, 0.02, 0.02],
             "duration": 13,  # [s]
-            "destination": "o1",
+            "destinations": ["o1", "o2", "o3", "o0"],
             "controlled_vehicles": 4,
             "initial_vehicle_count": 0,
             "spawn_probability": 0,
@@ -85,28 +76,26 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
         })
         return config
 
-    def define_spaces(self) -> None:
-        """
-        Set the types and spaces of observation and action from config.
-        """
-        super().define_spaces()
-        self.observation_type_goal = observation_factory(self, self.GOAL_OBS[
-            "observation"])
-
     def _reward(self, action: int) -> float:
         # Cooperative multi-agent reward
-        obs = self.observation_type_goal.observe()
+        obs = self.observation_type.observe()
         obs = obs if isinstance(obs, tuple) else (obs,)
         return sum(self.compute_reward(agent_obs['achieved_goal'],
                                        agent_obs['desired_goal'], {})
-                   for agent_obs in obs) / len(self.controlled_vehicles)
+                   for agent_obs in obs)
 
     def _agent_reward(self, action: int, vehicle: Vehicle) -> float:
+        # TODO: get a better idea what this would be,
+        # Whether it would be based on the vehicle and, if so,
+        # what it could replace
+        raise NotImplementedError
+
+    # TODO: deprecate this. Replace everywhere with goal-based reward
+    def _agent_reward_no_goal(self, action: int, vehicle: Vehicle) -> float:
         scaled_speed = utils.lmap(self.vehicle.speed,
                                   self.config["reward_speed_range"], [0, 1])
         reward = self.config["collision_reward"] * vehicle.crashed \
-                 + self.config["high_speed_reward"] * np.clip(scaled_speed, 0,
-                                                              1)
+                 + self.config["high_speed_reward"] * np.clip(scaled_speed, 0, 1)
 
         reward = self.config["arrived_reward"] if self.has_arrived(
             vehicle) else reward
@@ -151,7 +140,7 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
     def _info(self, obs: np.ndarray, action: int) -> dict:
         info = super()._info(obs, action)
         info["agents_rewards"] = tuple(
-            self._agent_reward(action, vehicle) for vehicle in
+            self._agent_reward_no_goal(action, vehicle) for vehicle in
             self.controlled_vehicles)
         info["agents_dones"] = tuple(
             self._agent_is_terminal(vehicle) for vehicle in
@@ -242,6 +231,16 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
         self.road = road
 
     def _make_goals(self):
+        """
+        Goals are synonymous to the destinations where agents can arrive to in
+        the intersection, only they are required for agents trained on a
+        Continuous or Discrete ActionSpace to reach the goal (since they don't
+        use a Controller to keep the lane), as well as for the reward function.
+
+        One destination will be assigned to each ego_agent in _make_vehicles().
+        There will be exactly one goal for each end of lane (so exactly 4 in a
+        basic cross-intersection).
+        """
         self.goals = dict()
         for corner in range(4):
             lane = self.road.network.get_lane((f"il{corner}", f"o{corner}", None))
@@ -270,18 +269,13 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
               self.road.step(1 / self.config["simulation_frequency"])) for _ in
              range(self.config["simulation_frequency"])]
 
-        # Challenger vehicle
-        '''
-        self._spawn_vehicle(60, spawn_probability=1, go_straight=True,
-                            position_deviation=0.1, speed_deviation=0)
-        '''
-
         # Controlled vehicles
         self.controlled_vehicles = []
+        self.goal_of = dict()
         for ego_id in range(0, self.config["controlled_vehicles"]):
             ego_lane = self.road.network.get_lane(
                 (f"o{ego_id % 4}", f"ir{ego_id % 4}", 0))
-            destination = self.config["destination"] \
+            destination = self.config["destinations"][ego_id] \
                           or f"o{self.np_random.randint(1, 4)}"
             ego_vehicle = self.action_type.vehicle_class(
                 self.road,
@@ -299,11 +293,12 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
 
             self.road.vehicles.append(ego_vehicle)
             self.controlled_vehicles.append(ego_vehicle)
+            self.goal_of[ego_vehicle] = self.goals[destination]
             for v in self.road.vehicles:  # Prevent early collisions
                 if v is not ego_vehicle and np.linalg.norm(
                         v.position - ego_vehicle.position) < 0.1:
                     self.road.vehicles.remove(v)
-            # TODO: play around here with distance
+            # TODO: play with distances in collision logic
 
     def _spawn_vehicle(self,
                        longitudinal: float = 0,

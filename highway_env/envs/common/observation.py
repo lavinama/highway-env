@@ -230,7 +230,7 @@ class KinematicObservation(ObservationType):
         if self.order == "shuffled":
             self.env.np_random.shuffle(obs[1:])
         # Flatten
-        return obs.astype(self.space().dtype)
+        return obs.astype(np.float32)
 
 
 class OccupancyGridObservation(ObservationType):
@@ -414,8 +414,12 @@ class OccupancyGridObservation(ObservationType):
 
 
 class KinematicsGoalObservation(KinematicObservation):
-    def __init__(self, env: 'AbstractEnv', scales: List[float], **kwargs: dict) -> None:
+    GOAL_FEATURES: List[str] = ['x', 'y', 'vx', 'vy']
+
+    def __init__(self, env: 'AbstractEnv', scales: List[float],
+                 goal_features: List[str] = None, **kwargs: dict) -> None:
         self.scales = np.array(scales)
+        self.goal_features = goal_features or self.GOAL_FEATURES
         super().__init__(env, **kwargs)
 
     def space(self) -> spaces.Space:
@@ -437,11 +441,13 @@ class KinematicsGoalObservation(KinematicObservation):
             "desired_goal": np.zeros((len(self.features),))
         }
 
-        obs = np.ravel(pd.DataFrame.from_records([self.observer_vehicle.to_dict()])[self.features])
-        goal = np.ravel(pd.DataFrame.from_records([self.env.goal.to_dict()])[self.features])
+        obs = super().observe()
+        ego = np.ravel(pd.DataFrame.from_records([self.observer_vehicle.to_dict()])[self.goal_features])
+        goal = np.ravel(pd.DataFrame.from_records(
+            [self.env.goal_of[self.observer_vehicle].to_dict()])[self.goal_features])
         obs = {
-            "observation": obs / self.scales,
-            "achieved_goal": obs / self.scales,
+            "observation": obs,
+            "achieved_goal": ego / self.scales,
             "desired_goal": goal / self.scales
         }
         return obs
