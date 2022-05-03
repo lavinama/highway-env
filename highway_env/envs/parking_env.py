@@ -111,6 +111,7 @@ class ParkingEnv(AbstractEnv, GoalEnv):
         if isinstance(self.observation_type, MultiAgentObservation):
             success = tuple(self._is_success(agent_obs['achieved_goal'], agent_obs['desired_goal']) for agent_obs in obs)
         else:
+            # TODO: understand why obs is redefined in this scenario, and not the previous one
             obs = self.observation_type_parking.observe()
             success = self._is_success(obs['achieved_goal'], obs['desired_goal'])
         info.update({"is_success": success})
