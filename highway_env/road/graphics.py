@@ -295,7 +295,8 @@ class RoadObjectGraphics:
         :param offscreen: whether the rendering should be done offscreen or not
         """
         o = object_
-        s = pygame.Surface((surface.pix(o.LENGTH), surface.pix(o.LENGTH)), pygame.SRCALPHA)  # per-pixel alpha
+        size_max = max(o.WIDTH, o.LENGTH)
+        s = pygame.Surface((surface.pix(size_max), surface.pix(size_max)), pygame.SRCALPHA)  # per-pixel alpha
         rect = (0, surface.pix(o.LENGTH / 2 - o.WIDTH / 2), surface.pix(o.LENGTH), surface.pix(o.WIDTH))
         pygame.draw.rect(s, cls.get_color(o, transparent), rect, 0)
         pygame.draw.rect(s, cls.BLACK, rect, 1)

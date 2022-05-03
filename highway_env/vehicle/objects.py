@@ -186,6 +186,7 @@ class Obstacle(RoadObject):
         super().__init__(road, position, heading, speed)
         self.solid = True
 
+
 class VariatingObstacle(Obstacle):
 
     """Obstacle with variating length/width."""

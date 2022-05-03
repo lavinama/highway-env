@@ -12,7 +12,7 @@ from highway_env.road.regulation import RegulatedRoad
 from highway_env.road.road import RoadNetwork
 from highway_env.vehicle.kinematics import Vehicle
 from highway_env.vehicle.controller import ControlledVehicle
-from highway_env.vehicle.objects import Landmark
+from highway_env.vehicle.objects import Landmark, Obstacle, VariatingObstacle
 
 
 class DeadIntersectionEnv(AbstractEnv, GoalEnv):
@@ -151,7 +151,21 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
     def _reset(self) -> None:
         self._make_road()
         self._make_goals()
+        self._make_obstacles()
         self._make_vehicles(self.config["initial_vehicle_count"])
+
+    def _make_obstacles(self):
+        width = self.road.network.lanes_list()[0].width_at(0)
+        length = self.road.network.lanes_list()[0].length
+        offset = 1.5
+        base = 5
+        for j in [-1, 1]:
+            for k in [-1, 1]:
+                obstacle = VariatingObstacle(road=self.road,
+                                             position=[j * (length - base), k * (length - base)],
+                                             length=30, width=30)
+                self.road.objects.append(obstacle)
+
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
         obs, reward, done, info = super().step(action)
