@@ -99,8 +99,7 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
                  + self.config["high_speed_reward"] * np.clip(scaled_speed, 0,
                                                               1)
 
-        reward = self.config["arrived_reward"] if self.has_arrived(
-            vehicle) else reward
+        reward = self.config["arrived_reward"] if self.has_arrived(vehicle) else reward
         if self.config["normalize_reward"]:
             reward = utils.lmap(reward, [self.config["collision_reward"],
                                          self.config["arrived_reward"]], [0, 1])
@@ -336,13 +335,14 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
                                              vehicle.position)[0]) >= vehicle.lane.length)
 
         self.road.vehicles = [vehicle for vehicle in self.road.vehicles
-                              if not (out_of_bounds(vehicle))]
+                              if not (out_of_bounds(vehicle) or self.has_arrived(vehicle))]
 
-    def has_arrived(self, vehicle: Vehicle, exit_distance: float = 5) -> bool:
-        return "il" in vehicle.lane_index[0] \
-               and "o" in vehicle.lane_index[1] \
-               and vehicle.lane.local_coordinates(vehicle.position)[
-                   0] >= exit_distance
+    def _is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray) -> bool:
+        return self.compute_reward(achieved_goal, desired_goal, {}) > -self.config["success_goal_reward"]
+
+    def has_arrived(self, vehicle: Vehicle) -> bool:
+        """The episode is over if the ego vehicles reached their goals."""
+        return self.goal_of[vehicle].hit
 
     def _cost(self, action: int) -> float:
         """The constraint signal is the occurrence of collisions."""
