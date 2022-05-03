@@ -31,8 +31,9 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
                 "type": "MultiAgentObservation",
                 "observation_config": {
                     "type": "KinematicsGoal",
-                    "vehicles_count": 15,
-                    "features": ["presence", "x", "y", "vx", "vy", "cos_h", "sin_h"],
+                    "vehicles_count": 4,
+                    "features": ["presence", "x", "y", "vx", "vy", "cos_h",
+                                 "sin_h"],
                     "goal_features": ["x", "y", "vx", "vy", "cos_h", "sin_h"],
                     "scales": [100, 100, 5, 5, 1, 1],
                     "normalize": False,
@@ -95,7 +96,8 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
         scaled_speed = utils.lmap(self.vehicle.speed,
                                   self.config["reward_speed_range"], [0, 1])
         reward = self.config["collision_reward"] * vehicle.crashed \
-                 + self.config["high_speed_reward"] * np.clip(scaled_speed, 0, 1)
+                 + self.config["high_speed_reward"] * np.clip(scaled_speed, 0,
+                                                              1)
 
         reward = self.config["arrived_reward"] if self.has_arrived(
             vehicle) else reward
@@ -243,9 +245,11 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
         """
         self.goals = dict()
         for corner in range(4):
-            lane = self.road.network.get_lane((f"il{corner}", f"o{corner}", None))
-            self.goals[f"o{corner}"] = Landmark(self.road, lane.position(lane.length, 0),
-                                 heading=lane.heading_at(60))
+            lane = self.road.network.get_lane(
+                (f"il{corner}", f"o{corner}", None))
+            self.goals[f"o{corner}"] = Landmark(self.road,
+                                                lane.position(lane.length, 0),
+                                                heading=lane.heading_at(60))
             self.road.objects.append(self.goals[f"o{corner}"])
 
     def _make_vehicles(self, n_vehicles: int = 10) -> None:
@@ -325,15 +329,14 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
         return vehicle
 
     def _clear_vehicles(self) -> None:
-        is_leaving = lambda vehicle: "il" in vehicle.lane_index[0] and "o" in \
-                                     vehicle.lane_index[1] \
-                                     and vehicle.lane.local_coordinates(
-            vehicle.position)[0] \
-                                     >= vehicle.lane.length - 4 * vehicle.LENGTH
+        out_of_bounds = lambda vehicle: (abs(vehicle.lane.local_coordinates(
+                                            vehicle.position)[1]) >= vehicle.lane.length
+                                         or \
+                                         abs(vehicle.lane.local_coordinates(
+                                             vehicle.position)[0]) >= vehicle.lane.length)
+
         self.road.vehicles = [vehicle for vehicle in self.road.vehicles
-                              if vehicle in self.controlled_vehicles
-                              or not (
-                    is_leaving(vehicle) or vehicle.route is None)]
+                              if not (out_of_bounds(vehicle))]
 
     def has_arrived(self, vehicle: Vehicle, exit_distance: float = 5) -> bool:
         return "il" in vehicle.lane_index[0] \
