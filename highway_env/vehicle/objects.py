@@ -100,7 +100,7 @@ class RoadObject(ABC):
 
     def _is_colliding(self, other, dt):
         # Fast spherical pre-check
-        if np.linalg.norm(other.position - self.position) > self.diagonal + self.speed * dt:
+        if np.linalg.norm(other.position - self.position) > (self.diagonal + other.diagonal) / 2 + self.speed * dt:
             return False, False, np.zeros(2,)
         # Accurate rectangular check
         return utils.are_polygons_intersecting(self.polygon(), other.polygon(), self.velocity * dt, other.velocity * dt)
@@ -185,6 +185,14 @@ class Obstacle(RoadObject):
     def __init__(self, road, position: Sequence[float], heading: float = 0, speed: float = 0):
         super().__init__(road, position, heading, speed)
         self.solid = True
+
+class VariatingObstacle(Obstacle):
+
+    """Obstacle with variating length/width."""
+    def __init__(self, road, position: Sequence[float], heading: float = 0, speed: float = 0, length: float = 2, width: float = 2):
+        self.LENGTH = length
+        self.WIDTH = width
+        super().__init__(road, position, heading, speed)
 
 
 class Landmark(RoadObject):
