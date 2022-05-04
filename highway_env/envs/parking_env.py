@@ -46,6 +46,29 @@ class GoalEnv(Env):
         """
         raise NotImplementedError
 
+    def get_goal_of(self, vehicle):
+        """
+        In Single-agent settings, the goal
+        In Multi-agent settings, there will potentially be one goal for each agent in the environment.
+        This method ensures goal environments have at least one way of retrieving this goal.
+        Should be overriden if definition of goal changes.
+        Args:
+            vehicle (Vehicle): the vehicle trying to achieve the goal
+        Returns:
+            goal (object): the desired goal that we asked the agent vehicle to attempt to achieve
+        """
+        try:
+            goal_of_vehicle = self.goal_of[vehicle]
+        except AttributeError:
+            try:
+                goal_of_vehicle = self.goal
+            except AttributeError:
+                raise AttributeError(
+                    f"GoalEnvs need to have at least one goal. "
+                    f"{self} does not have any goal to provide.")
+
+        return goal_of_vehicle
+
 
 class ParkingEnv(AbstractEnv, GoalEnv):
     """

@@ -418,9 +418,9 @@ class KinematicsGoalObservation(KinematicObservation):
 
     def __init__(self, env: 'AbstractEnv', scales: List[float],
                  goal_features: List[str] = None, **kwargs: dict) -> None:
-        self.scales = np.array(scales)
-        self.goal_features = goal_features or self.GOAL_FEATURES
         super().__init__(env, **kwargs)
+        self.scales = np.array(scales)
+        self.goal_features = goal_features or self.features
 
     def space(self) -> spaces.Space:
         try:
@@ -443,8 +443,7 @@ class KinematicsGoalObservation(KinematicObservation):
 
         obs = super().observe()
         ego = np.ravel(pd.DataFrame.from_records([self.observer_vehicle.to_dict()])[self.goal_features])
-        goal = np.ravel(pd.DataFrame.from_records(
-            [self.env.goal_of[self.observer_vehicle].to_dict()])[self.goal_features])
+        goal = np.ravel(pd.DataFrame.from_records([self.env.get_goal_of(self.observer_vehicle).to_dict()])[self.goal_features])
         obs = {
             "observation": obs,
             "achieved_goal": ego / self.scales,
