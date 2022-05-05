@@ -436,9 +436,9 @@ class KinematicsGoalObservation(KinematicObservation):
     def observe(self) -> Dict[str, np.ndarray]:
         if not self.observer_vehicle:
             return {
-            "observation": np.zeros((len(self.features),)),
-            "achieved_goal": np.zeros((len(self.features),)),
-            "desired_goal": np.zeros((len(self.features),))
+            "observation": super().observe(),
+            "achieved_goal": np.zeros((len(self.goal_features),)),
+            "desired_goal": np.zeros((len(self.goal_features),))
         }
 
         obs = super().observe()

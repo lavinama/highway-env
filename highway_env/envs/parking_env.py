@@ -99,9 +99,8 @@ class ParkingEnv(AbstractEnv, GoalEnv):
         config = super().default_config()
         config.update({
             "observation": {
-                "type": "KinematicsGoal",
+                "type": "Kinematics",
                 "features": ['x', 'y', 'vx', 'vy', 'cos_h', 'sin_h'],
-                "scales": [100, 100, 5, 5, 1, 1],
                 "normalize": False
             },
             "action": {

@@ -23,6 +23,24 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
     }
     ACTIONS_INDEXES = {v: k for k, v in ACTIONS.items()}
 
+    # For parking env with GrayscaleObservation, the env need
+    # this GOAL_OBS to calculate the reward and the info.
+    GOAL_OBS = {
+        "observation": {
+            "type": "MultiAgentObservation",
+            "observation_config": {
+                "type": "KinematicsGoal",
+                "features": ['x', 'y', 'vx', 'vy', 'cos_h', 'sin_h'],
+                "scales": [100, 100, 5, 5, 1, 1],
+                "normalize": False
+            }
+        }
+    }
+
+    def __init__(self, config: dict = None):
+        super().__init__(config)
+        self.observation_type_parking = None
+
     @classmethod
     def default_config(cls) -> dict:
         config = super().default_config()
@@ -30,12 +48,10 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
             "observation": {
                 "type": "MultiAgentObservation",
                 "observation_config": {
-                    "type": "KinematicsGoal",
+                    "type": "Kinematics",
                     "vehicles_count": 4,
                     "features": ["presence", "x", "y", "vx", "vy", "cos_h",
                                  "sin_h"],
-                    "goal_features": ["x", "y", "vx", "vy", "cos_h", "sin_h"],
-                    "scales": [100, 100, 5, 5, 1, 1],
                     "normalize": False,
                     "features_range": {
                         "x": [-100, 100],
@@ -77,9 +93,17 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
         })
         return config
 
+    def define_spaces(self) -> None:
+        """
+        Set the types and spaces of observation and action from config.
+        """
+        super().define_spaces()
+        self.observation_type_parking = observation_factory(self, self.GOAL_OBS[
+            "observation"])
+
     def _reward(self, action: int) -> float:
         # Cooperative multi-agent reward
-        obs = self.observation_type.observe()
+        obs = self.observation_type_parking.observe()
         obs = obs if isinstance(obs, tuple) else (obs,)
         return sum(self.compute_reward(agent_obs['achieved_goal'],
                                        agent_obs['desired_goal'], {})
@@ -99,7 +123,8 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
                  + self.config["high_speed_reward"] * np.clip(scaled_speed, 0,
                                                               1)
 
-        reward = self.config["arrived_reward"] if self.has_arrived(vehicle) else reward
+        reward = self.config["arrived_reward"] if self.has_arrived(
+            vehicle) else reward
         if self.config["normalize_reward"]:
             reward = utils.lmap(reward, [self.config["collision_reward"],
                                          self.config["arrived_reward"]], [0, 1])
@@ -162,10 +187,10 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
         for j in [-1, 1]:
             for k in [-1, 1]:
                 obstacle = VariatingObstacle(road=self.road,
-                                             position=[j * (length - base), k * (length - base)],
+                                             position=[j * (length - base),
+                                                       k * (length - base)],
                                              length=30, width=30)
                 self.road.objects.append(obstacle)
-
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
         obs, reward, done, info = super().step(action)
@@ -343,16 +368,20 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
 
     def _clear_vehicles(self) -> None:
         out_of_bounds = lambda vehicle: (abs(vehicle.lane.local_coordinates(
-                                            vehicle.position)[1]) >= vehicle.lane.length
+            vehicle.position)[1]) >= vehicle.lane.length
                                          or \
                                          abs(vehicle.lane.local_coordinates(
-                                             vehicle.position)[0]) >= vehicle.lane.length)
+                                             vehicle.position)[
+                                                 0]) >= vehicle.lane.length)
 
         self.road.vehicles = [vehicle for vehicle in self.road.vehicles
-                              if not (out_of_bounds(vehicle) or self.has_arrived(vehicle))]
+                              if not (
+                        out_of_bounds(vehicle) or self.has_arrived(vehicle))]
 
-    def _is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray) -> bool:
-        return self.compute_reward(achieved_goal, desired_goal, {}) > -self.config["success_goal_reward"]
+    def _is_success(self, achieved_goal: np.ndarray,
+                    desired_goal: np.ndarray) -> bool:
+        return self.compute_reward(achieved_goal, desired_goal, {})\
+               > -self.config["success_goal_reward"]
 
     def has_arrived(self, vehicle: Vehicle) -> bool:
         """The episode is over if the ego vehicles reached their goals."""
