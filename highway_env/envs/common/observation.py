@@ -413,6 +413,27 @@ class OccupancyGridObservation(ObservationType):
                             self.grid[layer_index, i, j] = 1
 
 
+class MyKinematicsGoalObservation(KinematicObservation):
+    GOAL_FEATURES: List[str] = ['x', 'y', 'vx', 'vy']
+
+    def __init__(self, env: 'AbstractEnv', goal_features: List[str] = None, **kwargs: dict) -> None:
+        super().__init__(env, **kwargs)
+        self.goal_features = goal_features or self.features
+
+    def space(self) -> spaces.Space:
+        return spaces.Box(shape=(self.vehicles_count * len(self.features) + len(self.goal_features),), low=-np.inf, high=np.inf, dtype=np.float32)
+
+    def observe(self) -> np.ndarray:
+        obs = np.reshape(super().observe(), -1)
+        if not self.observer_vehicle:
+            goal = np.zeros(len(self.goal_features))
+        else:
+            goal = np.ravel(pd.DataFrame.from_records(
+                [self.env.get_goal_of(self.observer_vehicle).to_dict()])[
+                                self.goal_features])
+
+        return np.concatenate([obs, goal])
+
 class KinematicsGoalObservation(KinematicObservation):
     GOAL_FEATURES: List[str] = ['x', 'y', 'vx', 'vy']
 
@@ -636,6 +657,8 @@ def observation_factory(env: 'AbstractEnv', config: dict) -> ObservationType:
         return OccupancyGridObservation(env, **config)
     elif config["type"] == "KinematicsGoal":
         return KinematicsGoalObservation(env, **config)
+    elif config["type"] == "MyKinematicsGoal":
+        return MyKinematicsGoalObservation(env, **config)
     elif config["type"] == "GrayscaleObservation":
         return GrayscaleObservation(env, **config)
     elif config["type"] == "AttributesObservation":

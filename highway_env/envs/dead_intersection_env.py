@@ -48,10 +48,11 @@ class DeadIntersectionEnv(AbstractEnv, GoalEnv):
             "observation": {
                 "type": "MultiAgentObservation",
                 "observation_config": {
-                    "type": "Kinematics",
+                    "type": "MyKinematicsGoal",
                     "vehicles_count": 4,
                     "features": ["presence", "x", "y", "vx", "vy", "cos_h",
                                  "sin_h"],
+                    "goal_features": ["x", "y", "vx", "vy"],
                     "normalize": False,
                     "features_range": {
                         "x": [-100, 100],
