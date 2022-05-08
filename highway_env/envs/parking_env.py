@@ -144,14 +144,16 @@ class ParkingEnv(AbstractEnv, GoalEnv):
     def _create_vehicles(self) -> None:
         """Create some new random vehicles of a given type, and add them on the road."""
         self.controlled_vehicles = []
+        lane = self.np_random.choice(self.road.network.lanes_list())
+
         for i in range(self.config["controlled_vehicles"]):
             vehicle = self.action_type.vehicle_class(self.road, [i*20, 0], 2*np.pi*self.np_random.rand(), 0)
             self.road.vehicles.append(vehicle)
             self.controlled_vehicles.append(vehicle)
+            # TODO: generate random goal locations for each vehicle
+            vehicle.goal = Landmark(self.road, lane.position(lane.length/2, 0), heading=lane.heading)
+            self.road.objects.append(vehicle.goal)
 
-        lane = self.np_random.choice(self.road.network.lanes_list())
-        self.goal = Landmark(self.road, lane.position(lane.length/2, 0), heading=lane.heading)
-        self.road.objects.append(self.goal)
 
     def compute_reward(self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: dict, p: float = 0.5) -> float:
         """

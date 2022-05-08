@@ -418,29 +418,26 @@ class KinematicsGoalObservation(KinematicObservation):
         super().__init__(env, **kwargs)
 
     def space(self) -> spaces.Space:
-        try:
-            obs = self.observe()
-            return spaces.Dict(dict(
-                desired_goal=spaces.Box(-np.inf, np.inf, shape=obs["desired_goal"].shape, dtype=np.float64),
-                achieved_goal=spaces.Box(-np.inf, np.inf, shape=obs["achieved_goal"].shape, dtype=np.float64),
-                observation=spaces.Box(-np.inf, np.inf, shape=obs["observation"].shape, dtype=np.float64),
-            ))
-        except AttributeError:
-            return spaces.Space()
+        return spaces.Dict(dict(
+            desired_goal=spaces.Box(-np.inf, np.inf, shape=(len(self.features),), dtype=np.float64),
+            achieved_goal=spaces.Box(-np.inf, np.inf, shape=(len(self.features),), dtype=np.float64),
+            observation=spaces.Box(-np.inf, np.inf, shape=(self.vehicles_count, len(self.features)), dtype=np.float32),
+        ))
 
     def observe(self) -> Dict[str, np.ndarray]:
         if not self.observer_vehicle:
             return {
-            "observation": np.zeros((len(self.features),)),
+            "observation": np.zeros((self.vehicles_count, len(self.features))),
             "achieved_goal": np.zeros((len(self.features),)),
             "desired_goal": np.zeros((len(self.features),))
         }
 
-        obs = np.ravel(pd.DataFrame.from_records([self.observer_vehicle.to_dict()])[self.features])
-        goal = np.ravel(pd.DataFrame.from_records([self.env.goal.to_dict()])[self.features])
+        obs = super().observe()
+        ego_loc = np.ravel(pd.DataFrame.from_records([self.observer_vehicle.to_dict()])[self.features])
+        goal = np.ravel(pd.DataFrame.from_records([self.observer_vehicle.goal.to_dict()])[self.features])
         obs = {
-            "observation": obs / self.scales,
-            "achieved_goal": obs / self.scales,
+            "observation": obs,
+            "achieved_goal": ego_loc / self.scales,
             "desired_goal": goal / self.scales
         }
         return obs
