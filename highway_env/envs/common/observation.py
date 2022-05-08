@@ -413,14 +413,19 @@ class OccupancyGridObservation(ObservationType):
 
 
 class KinematicsGoalObservation(KinematicObservation):
-    def __init__(self, env: 'AbstractEnv', scales: List[float], **kwargs: dict) -> None:
-        self.scales = np.array(scales)
+
+    def __init__(self, env: 'AbstractEnv',
+                 scales: List[float],
+                 goal_features: Optional[List[str]] = None,
+                 **kwargs: dict) -> None:
         super().__init__(env, **kwargs)
+        self.scales = np.array(scales)
+        self.goal_features = goal_features or self.features
 
     def space(self) -> spaces.Space:
         return spaces.Dict(dict(
-            desired_goal=spaces.Box(-np.inf, np.inf, shape=(len(self.features),), dtype=np.float64),
-            achieved_goal=spaces.Box(-np.inf, np.inf, shape=(len(self.features),), dtype=np.float64),
+            desired_goal=spaces.Box(-np.inf, np.inf, shape=(len(self.goal_features),), dtype=np.float64),
+            achieved_goal=spaces.Box(-np.inf, np.inf, shape=(len(self.goal_features),), dtype=np.float64),
             observation=spaces.Box(-np.inf, np.inf, shape=(self.vehicles_count, len(self.features)), dtype=np.float32),
         ))
 
@@ -428,13 +433,13 @@ class KinematicsGoalObservation(KinematicObservation):
         if not self.observer_vehicle:
             return {
             "observation": np.zeros((self.vehicles_count, len(self.features))),
-            "achieved_goal": np.zeros((len(self.features),)),
-            "desired_goal": np.zeros((len(self.features),))
+            "achieved_goal": np.zeros((len(self.goal_features),)),
+            "desired_goal": np.zeros((len(self.goal_features),))
         }
 
         obs = super().observe()
-        ego_loc = np.ravel(pd.DataFrame.from_records([self.observer_vehicle.to_dict()])[self.features])
-        goal = np.ravel(pd.DataFrame.from_records([self.observer_vehicle.goal.to_dict()])[self.features])
+        ego_loc = np.ravel(pd.DataFrame.from_records([self.observer_vehicle.to_dict()])[self.goal_features])
+        goal = np.ravel(pd.DataFrame.from_records([self.observer_vehicle.goal.to_dict()])[self.goal_features])
         obs = {
             "observation": obs,
             "achieved_goal": ego_loc / self.scales,
