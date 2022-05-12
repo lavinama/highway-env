@@ -153,6 +153,7 @@ class ParkingEnv(AbstractEnv, GoalEnv):
         """
         return -np.power(np.dot(np.abs(achieved_goal - desired_goal), np.array(self.config["reward_weights"])), p)
 
+    # TODO: return one value for each agent in a tuple/list
     def _reward(self, action: np.ndarray) -> float:
         obs = self.observation_type.observe()
         obs = obs if isinstance(obs, tuple) else (obs,)
@@ -162,6 +163,7 @@ class ParkingEnv(AbstractEnv, GoalEnv):
     def _is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray) -> bool:
         return self.compute_reward(achieved_goal, desired_goal, {}) > -self.config["success_goal_reward"]
 
+    # TODO: return one value for each agent in a tuple/list
     def _is_terminal(self) -> bool:
         """The episode is over if the ego vehicle crashed or the goal is reached."""
         time = self.steps >= self.config["duration"]
@@ -177,9 +179,36 @@ class ParkingEnvActionRepeat(ParkingEnv):
         super().__init__({"policy_frequency": 1, "duration": 20})
 
 
+class ParkingEnvMultiAgent(ParkingEnv):
+    def __init__(self):
+        super().__init__({
+            "observation": {
+                "type": "MultiAgentObservation",
+                "observation_config": {
+                    "type": "KinematicsGoal",
+                    "features": ['x', 'y', 'vx', 'vy', 'cos_h', 'sin_h'],
+                    "scales": [100, 100, 5, 5, 1, 1],
+                    "normalize": False
+                },
+            },
+            "action": {
+                "type": "MultiAgentAction",
+                "action_config": {
+                    "type": "ContinuousAction"
+                },
+            },
+            "controlled_vehicles": 4
+        })
+
+
 register(
     id='parking-v0',
     entry_point='highway_env.envs:ParkingEnv',
+)
+
+register(
+    id='parking-ma-v0',
+    entry_point='highway_env.envs:ParkingEnvMultiAgent',
 )
 
 register(

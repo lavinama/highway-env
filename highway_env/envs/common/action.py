@@ -249,7 +249,8 @@ class MultiAgentAction(ActionType):
         return action_factory(self.env, self.action_config).vehicle_class
 
     def act(self, action: Action) -> None:
-        assert isinstance(action, tuple)
+        if not isinstance(action, tuple):
+            action = tuple(agent_action for agent_action in action)
         for agent_action, action_type in zip(action, self.agents_action_types):
             action_type.act(agent_action)
 
