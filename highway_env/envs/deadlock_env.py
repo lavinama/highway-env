@@ -25,6 +25,8 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
     Credits to Munir Jojo-Verge for the idea and initial implementation.
     """
 
+    NUM_ROADS = 4
+
     def __init__(self, config: dict = None) -> None:
         super().__init__(config)
         self.viewer = StaticEnvViewer(self)
@@ -101,7 +103,8 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
 
         net = RoadNetwork()
         n, c, s = LineType.NONE, LineType.CONTINUOUS, LineType.STRIPED
-        for corner in range(4):
+        self.goals = []
+        for corner in range(self.NUM_ROADS):
             angle = np.radians(90 * corner)
             is_horizontal = corner % 2
             priority = 3 if is_horizontal else 1
@@ -113,47 +116,48 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
                          StraightLane(start, end, line_types=[s, c], priority=priority, speed_limit=10))
             # Right turn
             r_center = rotation @ (np.array([outer_distance, outer_distance]))
-            net.add_lane("ir" + str(corner), "il" + str((corner - 1) % 4),
+            net.add_lane("ir" + str(corner), "il" + str((corner - 1) % self.NUM_ROADS),
                          CircularLane(r_center, right_turn_radius, angle + np.radians(180), angle + np.radians(270),
                                       line_types=[n, c], priority=priority, speed_limit=10))
             # Left turn
             l_center = rotation @ (np.array([-left_turn_radius + lane_width / 2, left_turn_radius - lane_width / 2]))
-            net.add_lane("ir" + str(corner), "il" + str((corner + 1) % 4),
+            net.add_lane("ir" + str(corner), "il" + str((corner + 1) % self.NUM_ROADS),
                          CircularLane(l_center, left_turn_radius, angle + np.radians(0), angle + np.radians(-90),
                                       clockwise=False, line_types=[n, n], priority=priority - 1, speed_limit=10))
             # Straight
             start = rotation @ np.array([lane_width / 2, outer_distance])
             end = rotation @ np.array([lane_width / 2, -outer_distance])
-            net.add_lane("ir" + str(corner), "il" + str((corner + 2) % 4),
+            net.add_lane("ir" + str(corner), "il" + str((corner + 2) % self.NUM_ROADS),
                          StraightLane(start, end, line_types=[s, n], priority=priority, speed_limit=10))
             # Exit
             start = rotation @ np.flip([lane_width / 2, access_length + outer_distance], axis=0)
             end = rotation @ np.flip([lane_width / 2, outer_distance], axis=0)
-            net.add_lane("il" + str((corner - 1) % 4), "o" + str((corner - 1) % 4),
-                         StraightLane(end, start, line_types=[n, c], priority=priority, speed_limit=10))
+            end_lane = StraightLane(end, start, line_types=[n, c], priority=priority, speed_limit=10)
+            net.add_lane("il" + str((corner - 1) % self.NUM_ROADS), "o" + str((corner - 1) % self.NUM_ROADS), end_lane)
+
+            # Goal
+            longitudinal = end_lane.length / 2
+            self.goals.append(Landmark(self.road,
+                                end_lane.position(longitudinal, 0),
+                                heading=end_lane.heading))
 
         road = RegulatedRoad(network=net, np_random=self.np_random, record_history=self.config["show_trajectories"])
         self.road = road
 
+        # Append Goals to road
+        for goal in self.goals:
+            self.road.objects.append(goal)
 
     def _create_vehicles(self) -> None:
         """Create some new random vehicles of a given type, and add them on the road."""
         self.controlled_vehicles = []
-        unused_lanes = self.road.network.lanes_list().copy()
 
         for i in range(self.config["controlled_vehicles"]):
             vehicle = self.action_type.vehicle_class(self.road, [i*20, 0], 2*np.pi*self.np_random.rand(), 0)
             self.road.vehicles.append(vehicle)
             self.controlled_vehicles.append(vehicle)
-
-            lane = self.np_random.choice(unused_lanes)
-            unused_lanes.remove(lane)
-            longitudinal = lane.length / 2
-            vehicle.goal = Landmark(self.road,
-                                    lane.position(longitudinal, 0),
-                                    heading=lane.heading_at(longitudinal))
-            self.road.objects.append(vehicle.goal)
-
+            # Allocate one goal to each vehicle
+            vehicle.goal = self.goals[self.np_random.randint(self.NUM_ROADS)]
 
     def compute_reward(self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: dict, p: float = 0.5) -> float:
         """
