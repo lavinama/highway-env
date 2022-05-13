@@ -26,6 +26,7 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
     """
 
     NUM_ROADS = 4
+    ROAD_LENGTH = 40
 
     def __init__(self, config: dict = None) -> None:
         super().__init__(config)
@@ -99,7 +100,7 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
         right_turn_radius = lane_width + 5  # [m}
         left_turn_radius = right_turn_radius + lane_width  # [m}
         outer_distance = right_turn_radius + lane_width / 2
-        access_length = 40  # [m]
+        access_length = self.ROAD_LENGTH  # [m]
 
         net = RoadNetwork()
         n, c, s = LineType.NONE, LineType.CONTINUOUS, LineType.STRIPED
@@ -152,8 +153,17 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
         """Create some new random vehicles of a given type, and add them on the road."""
         self.controlled_vehicles = []
 
-        for i in range(self.config["controlled_vehicles"]):
-            vehicle = self.action_type.vehicle_class(self.road, [i*20, 0], 2*np.pi*self.np_random.rand(), 0)
+        for ego_id in range(self.config["controlled_vehicles"]):
+            ego_lane = self.road.network.get_lane(
+                ("o{}".format(ego_id % self.NUM_ROADS),
+                 "ir{}".format(ego_id % self.NUM_ROADS),
+                 0)
+            )
+            ego_position = ego_lane.position(self.ROAD_LENGTH + 7.5 + self.np_random.rand(1),
+                                             ((self.np_random.rand(1) * 2) - 1) * 3)
+            ego_heading = ego_lane.heading #  + (self.np_random.rand(1)[0] / 10)
+            vehicle = self.action_type.vehicle_class(self.road, ego_position, ego_heading, 0)
+            # vehicle = self.action_type.vehicle_class(self.road, [ego_id*20, 0], 2*np.pi*self.np_random.rand(), 0)
             self.road.vehicles.append(vehicle)
             self.controlled_vehicles.append(vehicle)
             # Allocate one goal to each vehicle
