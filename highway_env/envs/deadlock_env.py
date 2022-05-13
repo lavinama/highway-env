@@ -160,8 +160,9 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
                  0)
             )
             ego_position = ego_lane.position(self.ROAD_LENGTH + 7.5 + self.np_random.rand(1),
-                                             ((self.np_random.rand(1) * 2) - 1) * 3)
-            ego_heading = ego_lane.heading #  + (self.np_random.rand(1)[0] / 10)
+                                             ((self.np_random.rand(1) * 2) - 1))
+            ego_heading = ego_lane.heading + \
+                          ((self.np_random.rand(1) * 2) - 1)[0] * np.pi / 12
             vehicle = self.action_type.vehicle_class(self.road, ego_position, ego_heading, 0)
             # vehicle = self.action_type.vehicle_class(self.road, [ego_id*20, 0], 2*np.pi*self.np_random.rand(), 0)
             self.road.vehicles.append(vehicle)
