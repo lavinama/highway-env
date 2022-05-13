@@ -168,18 +168,21 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
     def _create_vehicles(self) -> None:
         """Create some new random vehicles of a given type, and add them on the road."""
         self.controlled_vehicles = []
-
+        offsets = np.zeros(self.NUM_ROADS)
         for ego_id in range(self.config["controlled_vehicles"]):
             ego_lane = self.road.network.get_lane(
                 ("o{}".format(ego_id % self.NUM_ROADS),
                  "ir{}".format(ego_id % self.NUM_ROADS),
                  0)
             )
-            ego_position = ego_lane.position(self.ROAD_LENGTH + 7.5 + self.np_random.rand(1),
+            offsets[ego_id % self.NUM_ROADS] += self.np_random.rand(1)
+            ego_position = ego_lane.position(self.ROAD_LENGTH + 7.5 - offsets[ego_id % self.NUM_ROADS],
                                              ((self.np_random.rand(1) * 2) - 1))
             ego_heading = ego_lane.heading + \
                           ((self.np_random.rand(1) * 2) - 1)[0] * np.pi / 12
             vehicle = self.action_type.vehicle_class(self.road, ego_position, ego_heading, 0)
+            offsets[ego_id % self.NUM_ROADS] += vehicle.LENGTH + 2
+
             self.road.vehicles.append(vehicle)
             self.controlled_vehicles.append(vehicle)
             # Allocate one goal to each vehicle
@@ -220,7 +223,22 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
         return time or crashed or success
 
 
+class DeadlockEnv8(DeadlockEnv):
+    @classmethod
+    def default_config(cls) -> dict:
+        config = super().default_config()
+        config.update({
+            "controlled_vehicles": 8
+        })
+        return config
+
+
 register(
     id='deadlock-v0',
     entry_point='highway_env.envs:DeadlockEnv',
+)
+
+register(
+    id='deadlock-v1',
+    entry_point='highway_env.envs:DeadlockEnv8',
 )
