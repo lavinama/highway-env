@@ -160,6 +160,12 @@ class EnvViewer(object):
         pygame.quit()
 
 
+class StaticEnvViewer(EnvViewer):
+
+    def window_position(self) -> np.ndarray:
+        return np.array([0, 0])
+
+
 class EventHandler(object):
     @classmethod
     def handle_event(cls, action_type: ActionType, event: pygame.event.EventType) -> None:
