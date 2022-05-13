@@ -1,3 +1,5 @@
+from typing import Tuple
+
 from abc import abstractmethod
 from gym import Env
 from gym.envs.registration import register
@@ -13,6 +15,10 @@ from highway_env.road.regulation import RegulatedRoad
 from highway_env.road.road import Road, RoadNetwork
 from highway_env.vehicle.kinematics import Vehicle
 from highway_env.vehicle.objects import Landmark
+
+
+def _reached_goal(vehicle):
+    return vehicle.goal._is_colliding(vehicle, 0)[0]
 
 
 class DeadlockEnv(AbstractEnv, GoalEnv):
@@ -74,6 +80,16 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
             success = self._is_success(obs['achieved_goal'], obs['desired_goal'])
         info.update({"is_success": success})
         return info
+
+    def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
+        obs, reward, done, info = super().step(action)
+        self._clear_vehicles()
+        return obs, reward, done, info
+
+    def _clear_vehicles(self) -> None:
+        self.road.vehicles = [vehicle for vehicle in self.road.vehicles if
+                              vehicle in self.controlled_vehicles
+                              and not _reached_goal(vehicle)]
 
     def _reset(self):
         self._create_road()
@@ -164,7 +180,6 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
             ego_heading = ego_lane.heading + \
                           ((self.np_random.rand(1) * 2) - 1)[0] * np.pi / 12
             vehicle = self.action_type.vehicle_class(self.road, ego_position, ego_heading, 0)
-            # vehicle = self.action_type.vehicle_class(self.road, [ego_id*20, 0], 2*np.pi*self.np_random.rand(), 0)
             self.road.vehicles.append(vehicle)
             self.controlled_vehicles.append(vehicle)
             # Allocate one goal to each vehicle
