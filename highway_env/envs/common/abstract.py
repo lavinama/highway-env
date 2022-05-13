@@ -215,12 +215,12 @@ class AbstractEnv(gym.Env):
         self.steps += 1
         self._simulate(action)
 
-        obs = self.observation_type.observe()
+        self.obs = self.observation_type.observe()
         reward = self._reward(action)
         terminal = self._is_terminal()
-        info = self._info(obs, action)
+        info = self._info(self.obs, action)
 
-        return obs, reward, terminal, info
+        return self.obs, reward, terminal, info
 
     def _simulate(self, action: Optional[Action] = None) -> None:
         """Perform several steps of simulation with constant action."""

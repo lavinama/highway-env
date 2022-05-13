@@ -33,6 +33,7 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
 
     NUM_ROADS = 4
     ROAD_LENGTH = 40
+    DISTANCE_BETWEEN_VEHICLES = 2
 
     def __init__(self, config: dict = None) -> None:
         super().__init__(config)
@@ -153,12 +154,12 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
             net.add_lane("il" + str((corner - 1) % self.NUM_ROADS), "o" + str((corner - 1) % self.NUM_ROADS), end_lane)
 
             # Goal
-            longitudinal = end_lane.length / 2
+            longitudinal = end_lane.length
             self.goals.append(Landmark(self.road,
                                 end_lane.position(longitudinal, 0),
                                 heading=end_lane.heading))
 
-        road = RegulatedRoad(network=net, np_random=self.np_random, record_history=self.config["show_trajectories"])
+        road = Road(network=net, np_random=self.np_random, record_history=self.config["show_trajectories"])
         self.road = road
 
         # Append Goals to road
@@ -181,7 +182,7 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
             ego_heading = ego_lane.heading + \
                           ((self.np_random.rand(1) * 2) - 1)[0] * np.pi / 12
             vehicle = self.action_type.vehicle_class(self.road, ego_position, ego_heading, 0)
-            offsets[ego_id % self.NUM_ROADS] += vehicle.LENGTH + 2
+            offsets[ego_id % self.NUM_ROADS] += vehicle.LENGTH + self.DISTANCE_BETWEEN_VEHICLES
 
             self.road.vehicles.append(vehicle)
             self.controlled_vehicles.append(vehicle)
@@ -203,11 +204,10 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
         return -np.power(np.dot(np.abs(achieved_goal - desired_goal), np.array(self.config["reward_weights"])), p)
 
     # TODO: return one value for each agent in a tuple/list
-    def _reward(self, action: np.ndarray) -> float:
-        obs = self.observation_type.observe()
-        obs = obs if isinstance(obs, tuple) else (obs,)
-        return sum(self.compute_reward(agent_obs['achieved_goal'], agent_obs['desired_goal'], {})
-                     for agent_obs in obs)
+    def _reward(self, action: np.ndarray) -> np.array:
+        obs = self.obs if isinstance(self.obs, tuple) else (self.obs,)
+        return np.array([self.compute_reward(agent_obs['achieved_goal'], agent_obs['desired_goal'], {})
+                     for agent_obs in obs])
 
     def _is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray) -> bool:
         return self.compute_reward(achieved_goal, desired_goal, {}) > -self.config["success_goal_reward"]
@@ -217,8 +217,7 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
         """The episode is over if the ego vehicle crashed or the goal is reached."""
         time = self.steps >= self.config["duration"]
         crashed = any(vehicle.crashed for vehicle in self.controlled_vehicles)
-        obs = self.observation_type.observe()
-        obs = obs if isinstance(obs, tuple) else (obs,)
+        obs = self.obs if isinstance(self.obs, tuple) else (self.obs,)
         success = all(self._is_success(agent_obs['achieved_goal'], agent_obs['desired_goal']) for agent_obs in obs)
         return time or crashed or success
 
