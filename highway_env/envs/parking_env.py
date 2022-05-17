@@ -157,8 +157,8 @@ class ParkingEnv(AbstractEnv, GoalEnv):
     def _reward(self, action: np.ndarray) -> float:
         obs = self.observation_type.observe()
         obs = obs if isinstance(obs, tuple) else (obs,)
-        return sum(self.compute_reward(agent_obs['achieved_goal'], agent_obs['desired_goal'], {})
-                     for agent_obs in obs)
+        return np.array([self.compute_reward(agent_obs['achieved_goal'], agent_obs['desired_goal'], {})
+                     for agent_obs in obs])
 
     def _is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray) -> bool:
         return self.compute_reward(achieved_goal, desired_goal, {}) > -self.config["success_goal_reward"]
