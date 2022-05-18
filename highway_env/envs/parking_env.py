@@ -167,11 +167,10 @@ class ParkingEnv(AbstractEnv, GoalEnv):
     def _is_terminal(self) -> bool:
         """The episode is over if the ego vehicle crashed or the goal is reached."""
         time = self.steps >= self.config["duration"]
-        crashed = any(vehicle.crashed for vehicle in self.controlled_vehicles)
         obs = self.observation_type.observe()
         obs = obs if isinstance(obs, tuple) else (obs,)
         success = all(self._is_success(agent_obs['achieved_goal'], agent_obs['desired_goal']) for agent_obs in obs)
-        return time or crashed or success
+        return time or success
 
 
 class ParkingEnvActionRepeat(ParkingEnv):
@@ -197,7 +196,7 @@ class ParkingEnvMultiAgent(ParkingEnv):
                     "type": "ContinuousAction"
                 },
             },
-            "controlled_vehicles": 4
+            "controlled_vehicles": 2
         })
 
 
