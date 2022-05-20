@@ -21,6 +21,10 @@ class IntersectionEnv(AbstractEnv):
     }
     ACTIONS_INDEXES = {v: k for k, v in ACTIONS.items()}
 
+    NUM_ROADS = 4
+    ROAD_LENGTH = 100  # [m]
+    DISTANCE_BETWEEN_VEHICLES = 2
+
     @classmethod
     def default_config(cls) -> dict:
         config = super().default_config()
@@ -126,7 +130,7 @@ class IntersectionEnv(AbstractEnv):
         right_turn_radius = lane_width + 5  # [m}
         left_turn_radius = right_turn_radius + lane_width  # [m}
         outer_distance = right_turn_radius + lane_width / 2
-        access_length = 50 + 50  # [m]
+        access_length = self.ROAD_LENGTH  # [m]
 
         net = RoadNetwork()
         n, c, s = LineType.NONE, LineType.CONTINUOUS, LineType.STRIPED
@@ -184,18 +188,26 @@ class IntersectionEnv(AbstractEnv):
             [(self.road.act(), self.road.step(1 / self.config["simulation_frequency"])) for _ in range(self.config["simulation_frequency"])]
 
         # Challenger vehicle
-        self._spawn_vehicle(60, spawn_probability=1, go_straight=True, position_deviation=0.1, speed_deviation=0)
+        # self._spawn_vehicle(60, spawn_probability=1, go_straight=True, position_deviation=0.1, speed_deviation=0)
 
         # Controlled vehicles
         self.controlled_vehicles = []
+        offsets = np.zeros(self.NUM_ROADS)
         for ego_id in range(0, self.config["controlled_vehicles"]):
-            ego_lane = self.road.network.get_lane(("o{}".format(ego_id % 4), "ir{}".format(ego_id % 4), 0))
-            destination = self.config["destination"] or "o" + str(self.np_random.randint(1, 4))
-            ego_vehicle = self.action_type.vehicle_class(
-                             self.road,
-                             ego_lane.position(60 + 5*self.np_random.randn(1), 0),
-                             speed=ego_lane.speed_limit,
-                             heading=ego_lane.heading_at(60))
+            ego_lane = self.road.network.get_lane(
+                ("o{}".format(ego_id % self.NUM_ROADS),
+                 "ir{}".format(ego_id % self.NUM_ROADS),
+                 0)
+            )
+            destination = self.config["destination"]\
+                          or "o" + str(self.np_random.randint(1, self.NUM_ROADS))
+            offsets[ego_id % self.NUM_ROADS] += self.np_random.rand(1)
+            ego_position = ego_lane.position(self.ROAD_LENGTH - offsets[ego_id % self.NUM_ROADS],
+                                             ((self.np_random.rand(1) * 2) - 1))
+            ego_heading = ego_lane.heading + \
+                          ((self.np_random.rand(1) * 2) - 1)[0] * np.pi / 12
+            ego_vehicle = self.action_type.vehicle_class(self.road, ego_position, ego_heading, 0)
+            offsets[ego_id % self.NUM_ROADS] += ego_vehicle.LENGTH + self.DISTANCE_BETWEEN_VEHICLES
             try:
                 ego_vehicle.plan_route_to(destination)
                 ego_vehicle.speed_index = ego_vehicle.speed_to_index(ego_lane.speed_limit)
@@ -205,9 +217,11 @@ class IntersectionEnv(AbstractEnv):
 
             self.road.vehicles.append(ego_vehicle)
             self.controlled_vehicles.append(ego_vehicle)
+            """
             for v in self.road.vehicles:  # Prevent early collisions
                 if v is not ego_vehicle and np.linalg.norm(v.position - ego_vehicle.position) < 20:
                     self.road.vehicles.remove(v)
+            """
 
     def _spawn_vehicle(self,
                        longitudinal: float = 0,
