@@ -73,7 +73,7 @@ class IntersectionEnv(AbstractEnv):
                / len(self.controlled_vehicles)
 
     def _agent_reward(self, action: int, vehicle: Vehicle) -> float:
-        scaled_speed = utils.lmap(self.vehicle.speed, self.config["reward_speed_range"], [0, 1])
+        scaled_speed = utils.lmap(vehicle.speed, self.config["reward_speed_range"], [0, 1])
         reward = self.config["collision_reward"] * vehicle.crashed \
                  + self.config["high_speed_reward"] * np.clip(scaled_speed, 0, 1)
 
@@ -202,7 +202,7 @@ class IntersectionEnv(AbstractEnv):
             destination = self.config["destination"]\
                           or "o" + str(self.np_random.randint(1, self.NUM_ROADS))
             offsets[ego_id % self.NUM_ROADS] += self.np_random.rand(1)
-            ego_position = ego_lane.position(self.ROAD_LENGTH - offsets[ego_id % self.NUM_ROADS],
+            ego_position = ego_lane.position(self.ROAD_LENGTH + 7.5 - offsets[ego_id % self.NUM_ROADS],
                                              ((self.np_random.rand(1) * 2) - 1))
             ego_heading = ego_lane.heading + \
                           ((self.np_random.rand(1) * 2) - 1)[0] * np.pi / 12
@@ -273,7 +273,8 @@ class MultiAgentIntersectionEnv(IntersectionEnv):
                  "action_config": {
                      "type": "DiscreteMetaAction",
                      "lateral": False,
-                     "longitudinal": True
+                     "longitudinal": True,
+                     "target_speeds": [-3, 0, 4.5, 9]
                  }
             },
             "observation": {
