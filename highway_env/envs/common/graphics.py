@@ -160,6 +160,26 @@ class EnvViewer(object):
         pygame.quit()
 
 
+class StaticEnvViewer(EnvViewer):
+    """
+    Env viewer which does not follow any particular agent.
+    Stays in place at specified offset.
+    If none specified, stays in center (zero)
+    """
+
+    def __init__(self, env: 'AbstractEnv',
+                 config: Optional[dict] = None,
+                 offset: Optional[np.ndarray] = None) -> None:
+        super().__init__(env, config)
+        self.view_offset = np.array([0, 0])
+        if offset is not None:
+            self.view_offset = offset
+
+    def window_position(self) -> np.ndarray:
+        """the world position of the center of the displayed window."""
+        return self.view_offset
+
+
 class EventHandler(object):
     @classmethod
     def handle_event(cls, action_type: ActionType, event: pygame.event.EventType) -> None:

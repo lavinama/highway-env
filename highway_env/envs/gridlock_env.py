@@ -10,6 +10,7 @@ from highway_env.road.regulation import RegulatedRoad
 from highway_env.road.road import RoadNetwork
 from highway_env.vehicle.kinematics import Vehicle
 from highway_env.vehicle.controller import ControlledVehicle
+from highway_env.envs.common.graphics import StaticEnvViewer
 
 
 class GridlockEnv(AbstractEnv):
@@ -74,6 +75,10 @@ class GridlockEnv(AbstractEnv):
             "offroad_terminal": False
         })
         return config
+
+    def __init__(self, config: dict = None) -> None:
+        super().__init__(config)
+        self.viewer = StaticEnvViewer(self, offset=np.array([self.DISTANCE_BETWEEN_ROADS, self.DISTANCE_BETWEEN_ROADS + 5]))
 
     def _reward(self, action: int) -> float:
         # Cooperative multi-agent reward
