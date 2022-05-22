@@ -58,9 +58,9 @@ class IntersectionEnv(AbstractEnv):
             "screen_height": 600,
             "centering_position": [0.5, 0.6],
             "scaling": 5.5 * 1.3,
-            "collision_reward": -5,
+            "collision_reward": -100,
             "high_speed_reward": 1,
-            "arrived_reward": 1,
+            "arrived_reward": 50,
             "reward_speed_range": [7.0, 9.0],
             "normalize_reward": False,
             "offroad_terminal": False
@@ -75,7 +75,7 @@ class IntersectionEnv(AbstractEnv):
     def _agent_reward(self, action: int, vehicle: Vehicle) -> float:
         scaled_speed = utils.lmap(vehicle.speed, self.config["reward_speed_range"], [0, 1])
         reward = self.config["collision_reward"] * vehicle.crashed \
-                 + self.config["high_speed_reward"] * np.clip(scaled_speed, 0, 1)
+                 + self.config["high_speed_reward"] * vehicle.speed
 
         reward = self.config["arrived_reward"] if self.has_arrived(vehicle) else reward
         if self.config["normalize_reward"]:
