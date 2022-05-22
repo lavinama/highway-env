@@ -59,7 +59,7 @@ class GridlockEnv(AbstractEnv):
             },
             "duration": 13,  # [s]
             "destination": "o0",
-            "controlled_vehicles": 1,
+            "controlled_vehicles": 8,
             "initial_vehicle_count": 0,
             "spawn_probability": 0,
             "screen_width": 600,
@@ -211,7 +211,7 @@ class GridlockEnv(AbstractEnv):
             destination = self.config["destination"]\
                           or "o" + str(self.np_random.randint(1, self.NUM_ROADS))
             offsets[ego_id % self.NUM_ROADS] += self.np_random.rand(1)
-            ego_position = ego_lane.position(self.ROAD_LENGTH + 7.5 - offsets[ego_id % self.NUM_ROADS],
+            ego_position = ego_lane.position(self.ROAD_LENGTH + 14 - offsets[ego_id % self.NUM_ROADS],
                                              ((self.np_random.rand(1) * 2) - 1))
             ego_heading = ego_lane.heading + \
                           ((self.np_random.rand(1) * 2) - 1)[0] * np.pi / 12
