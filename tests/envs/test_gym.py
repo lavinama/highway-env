@@ -4,6 +4,7 @@ import pytest
 import highway_env
 
 envs = [
+    "gridlock-v0",
     "highway-v0",
     "merge-v0",
     "roundabout-v0",
