@@ -108,10 +108,15 @@ class AbstractLane(object):
             0 <= longitudinal < self.length + self.VEHICLE_LENGTH
         return is_close
 
+    def before_start(self, position: np.ndarray, longitudinal: float = None, lateral: float = None) -> bool:
+        if not longitudinal:
+            longitudinal, _ = self.local_coordinates(position)
+        return longitudinal < self.VEHICLE_LENGTH / 4
+
     def after_end(self, position: np.ndarray, longitudinal: float = None, lateral: float = None) -> bool:
         if not longitudinal:
             longitudinal, _ = self.local_coordinates(position)
-        return longitudinal > self.length - self.VEHICLE_LENGTH / 2
+        return longitudinal > self.length - self.VEHICLE_LENGTH / 4
 
     def distance(self, position: np.ndarray):
         """Compute the L1 distance [m] from a position to the lane."""

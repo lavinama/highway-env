@@ -99,11 +99,19 @@ class ControlledVehicle(Vehicle):
             target_lane_index = _from, _to, np.clip(_id - 1, 0, len(self.road.network.graph[_from][_to]) - 1)
             if self.road.network.get_lane(target_lane_index).is_reachable_from(self.position):
                 self.target_lane_index = target_lane_index
+        self.stop_if_going_back_out_of_lane()
 
         action = {"steering": self.steering_control(self.target_lane_index),
                   "acceleration": self.speed_control(self.target_speed)}
         action['steering'] = np.clip(action['steering'], -self.MAX_STEERING_ANGLE, self.MAX_STEERING_ANGLE)
         super().act(action)
+
+    def stop_if_going_back_out_of_lane(self) -> None:
+        """If the car is moving backwards and goes out of lane, stop it."""
+        if self.road.network.get_lane(self.target_lane_index).before_start(self.position):
+            self.target_speed = max(
+                min(0, self.target_speed + self.DELTA_SPEED),
+                    self.target_speed)
 
     def follow_road(self) -> None:
         """At the end of a lane, automatically switch to a next one."""
