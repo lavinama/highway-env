@@ -210,7 +210,7 @@ class IntersectionEnv(AbstractEnv):
                  0)
             )
             destination = self.config["destination"]\
-                          or "o" + str((ego_id + self.np_random.randint(0, 2)) % 4)
+                          or "o" + str((ego_id + self.np_random.randint(1, 3)) % 4)
             offsets[ego_id % self.NUM_ROADS] += self.np_random.rand(1)
             ego_position = ego_lane.position(self.ROAD_LENGTH + 7.5 - offsets[ego_id % self.NUM_ROADS],
                                              ((self.np_random.rand(1) * 2) - 1))
