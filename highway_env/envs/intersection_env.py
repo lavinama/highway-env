@@ -21,9 +21,11 @@ class IntersectionEnv(AbstractEnv):
     }
     ACTIONS_INDEXES = {v: k for k, v in ACTIONS.items()}
 
+    END_ROAD_OFFSET = 5
     NUM_ROADS = 4
     ROAD_LENGTH = 100  # [m]
-    DISTANCE_BETWEEN_VEHICLES = 2
+    MIN_DIST_VEHICLES = 2
+    MAX_DIST_VEHICLES = 10
 
     @classmethod
     def default_config(cls) -> dict:
@@ -211,13 +213,13 @@ class IntersectionEnv(AbstractEnv):
             )
             destination = self.config["destination"]\
                           or "o" + str((ego_id + self.np_random.randint(1, 3)) % 4)
-            offsets[ego_id % self.NUM_ROADS] += self.np_random.rand(1)
-            ego_position = ego_lane.position(self.ROAD_LENGTH + 7.5 - offsets[ego_id % self.NUM_ROADS],
+            offsets[ego_id % self.NUM_ROADS] += self.np_random.rand(1) * (self.MAX_DIST_VEHICLES - self.MIN_DIST_VEHICLES)
+            ego_position = ego_lane.position(self.ROAD_LENGTH - self.END_ROAD_OFFSET - offsets[ego_id % self.NUM_ROADS],
                                              ((self.np_random.rand(1) * 2) - 1))
             ego_heading = ego_lane.heading + \
                           ((self.np_random.rand(1) * 2) - 1)[0] * np.pi / 12
             ego_vehicle = self.action_type.vehicle_class(self.road, ego_position, ego_heading, 0)
-            offsets[ego_id % self.NUM_ROADS] += ego_vehicle.LENGTH + self.DISTANCE_BETWEEN_VEHICLES
+            offsets[ego_id % self.NUM_ROADS] += ego_vehicle.LENGTH + self.MIN_DIST_VEHICLES
             try:
                 ego_vehicle.plan_route_to(destination)
                 ego_vehicle.speed_index = ego_vehicle.speed_to_index(ego_lane.speed_limit)
@@ -290,12 +292,20 @@ class MultiAgentIntersectionEnv(IntersectionEnv):
             "observation": {
                 "type": "MultiAgentObservation",
                 "observation_config": {
-                    "type": "Kinematics"
+                    "type": "Kinematics",
+                    "vehicles_count": 15
                 }
             },
             "controlled_vehicles": 2
         })
         return config
+
+
+class MultiAgentDeadlockIntersectionEnv(MultiAgentIntersectionEnv):
+    END_ROAD_OFFSET = -7.5
+    MIN_DIST_VEHICLES = 2
+    MAX_DIST_VEHICLES = 3
+
 
 class ContinuousIntersectionEnv(IntersectionEnv):
     @classmethod
@@ -316,6 +326,7 @@ class ContinuousIntersectionEnv(IntersectionEnv):
             },
         })
         return config
+
 
 TupleMultiAgentIntersectionEnv = MultiAgentWrapper(MultiAgentIntersectionEnv)
 
@@ -338,4 +349,9 @@ register(
 register(
     id='intersection-multi-agent-v1',
     entry_point='highway_env.envs:TupleMultiAgentIntersectionEnv',
+)
+
+register(
+    id='intersection-multi-agent-deadlock-v0',
+    entry_point='highway_env.envs:MultiAgentDeadlockIntersectionEnv',
 )
