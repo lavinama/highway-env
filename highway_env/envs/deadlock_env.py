@@ -31,14 +31,16 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
 
     Credits to Munir Jojo-Verge for the idea and initial implementation.
     """
+    END_ROAD_OFFSET = -7.5
+    MIN_DIST_VEHICLES = 2
+    MAX_DIST_VEHICLES = 3
 
     NUM_ROADS = 4
     ROAD_LENGTH = 40
-    DISTANCE_BETWEEN_VEHICLES = 2
 
     def __init__(self, config: dict = None) -> None:
         super().__init__(config)
-        # self.viewer = StaticEnvViewer(self)
+        self.viewer = StaticEnvViewer(self)
 
     @classmethod
     def default_config(cls) -> dict:
@@ -193,13 +195,13 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
                  "ir{}".format(ego_id % self.NUM_ROADS),
                  0)
             )
-            offsets[ego_id % self.NUM_ROADS] += self.np_random.rand(1)
-            ego_position = ego_lane.position(self.ROAD_LENGTH + 7.5 - offsets[ego_id % self.NUM_ROADS],
+            offsets[ego_id % self.NUM_ROADS] += self.np_random.rand(1) * (self.MAX_DIST_VEHICLES - self.MIN_DIST_VEHICLES)
+            ego_position = ego_lane.position(self.ROAD_LENGTH - self.END_ROAD_OFFSET - offsets[ego_id % self.NUM_ROADS],
                                              ((self.np_random.rand(1) * 2) - 1))
             ego_heading = ego_lane.heading + \
                           ((self.np_random.rand(1) * 2) - 1)[0] * np.pi / 12
             vehicle = self.action_type.vehicle_class(self.road, ego_position, ego_heading, 0)
-            offsets[ego_id % self.NUM_ROADS] += vehicle.LENGTH + self.DISTANCE_BETWEEN_VEHICLES
+            offsets[ego_id % self.NUM_ROADS] += vehicle.LENGTH + self.MIN_DIST_VEHICLES
 
             self.road.vehicles.append(vehicle)
             self.controlled_vehicles.append(vehicle)
@@ -245,6 +247,11 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
         return self.compute_reward(achieved_goal, desired_goal, {}) > -self.config["success_goal_reward"]
 
 
+class DeadlockEnvFree(DeadlockEnv):
+    END_ROAD_OFFSET = 5
+    MIN_DIST_VEHICLES = 2
+    MAX_DIST_VEHICLES = 10
+
 class DeadlockEnv8(DeadlockEnv):
     @classmethod
     def default_config(cls) -> dict:
@@ -263,4 +270,9 @@ register(
 register(
     id='deadlock-v1',
     entry_point='highway_env.envs:DeadlockEnv8',
+)
+
+register(
+    id='deadlock-free-v0',
+    entry_point='highway_env.envs:DeadlockEnvFree',
 )
