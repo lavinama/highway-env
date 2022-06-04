@@ -281,8 +281,6 @@ class IntersectionEnv(AbstractEnv):
                  "ir{}".format(ego_id % self.NUM_ROADS),
                  0)
             )
-            destination = self.config["destination"]\
-                          or "o" + str((ego_id + self.np_random.randint(1, 3)) % 4)
             offsets[ego_id % self.NUM_ROADS] += self.np_random.rand(1) * (self.MAX_DIST_VEHICLES - self.MIN_DIST_VEHICLES)
             ego_position = ego_lane.position(self.ROAD_LENGTH - self.END_ROAD_OFFSET - offsets[ego_id % self.NUM_ROADS],
                                              ((self.np_random.rand(1) * 2) - 1))
@@ -290,6 +288,14 @@ class IntersectionEnv(AbstractEnv):
                           ((self.np_random.rand(1) * 2) - 1)[0] * np.pi / 12
             ego_vehicle = self.action_type.vehicle_class(self.road, ego_position, ego_heading, 0)
             offsets[ego_id % self.NUM_ROADS] += ego_vehicle.LENGTH + self.MIN_DIST_VEHICLES
+            if ego_lane.on_lane(ego_position):
+                # Car can also go right
+                destination = self.config["destination"] \
+                              or "o" + str((ego_id + self.np_random.randint(1, 4)) % 4)
+            else:
+                # Car can only move forwards or left
+                destination = self.config["destination"] \
+                              or "o" + str((ego_id + self.np_random.randint(1, 3)) % 4)
             try:
                 ego_vehicle.plan_route_to(destination)
                 ego_vehicle.speed_index = ego_vehicle.speed_to_index(ego_lane.speed_limit)
