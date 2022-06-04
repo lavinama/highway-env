@@ -55,8 +55,11 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
             "action": {
                 "type": "MultiAgentAction",
                 "action_config": {
-                    "type": "ContinuousAction"
-                },
+                    "type": "DiscreteMetaAction",
+                    "lateral": False,
+                    "longitudinal": True,
+                    "target_speeds": [-3, 0, 4.5, 9]
+                }
             },
             "controlled_vehicles": 4,
             "reward_weights": [1, 0.3, 0, 0, 0.02, 0.02],
