@@ -5,6 +5,7 @@ from gym import Env
 from gym.envs.registration import register
 import numpy as np
 
+from highway_env import utils
 from highway_env.envs import Action, GoalEnv
 from highway_env.envs.common.abstract import AbstractEnv
 from highway_env.envs.common.graphics import StaticEnvViewer
@@ -37,7 +38,7 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
 
     def __init__(self, config: dict = None) -> None:
         super().__init__(config)
-        self.viewer = StaticEnvViewer(self)
+        # self.viewer = StaticEnvViewer(self)
 
     @classmethod
     def default_config(cls) -> dict:
@@ -62,9 +63,12 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
                 }
             },
             "controlled_vehicles": 4,
-            "reward_weights": [1, 0.3, 0, 0, 0.02, 0.02],
-            "success_goal_reward": 0.12,
-            "collision_reward": -5,
+            "collision_reward": -100,
+            "high_speed_reward": 1,
+            "speed_to_reward": 3.5,
+            "arrived_reward": 50,
+            "reward_speed_range": [7.0, 9.0],
+            "normalize_reward": False,
             "steering_range": np.deg2rad(45),
             "simulation_frequency": 15,
             "policy_frequency": 5,
@@ -72,17 +76,27 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
             "screen_width": 600,
             "screen_height": 600,
             "centering_position": [0.5, 0.5],
+            "offroad_terminal": False,
             "scaling": 7,
         })
         return config
 
-    def _info(self, obs, action) -> dict:
-        info = super(DeadlockEnv, self)._info(obs, action)
-        if isinstance(self.observation_type, MultiAgentObservation):
-            success = tuple(self._is_success(agent_obs['achieved_goal'], agent_obs['desired_goal']) for agent_obs in obs)
-        else:
-            success = self._is_success(obs['achieved_goal'], obs['desired_goal'])
-        info.update({"is_success": success})
+    def _is_terminal(self) -> bool:
+        return any(vehicle.crashed for vehicle in self.controlled_vehicles) \
+               or all(self.has_arrived(vehicle) for vehicle in self.controlled_vehicles) \
+               or self.steps >= self.config["duration"] * self.config["policy_frequency"] \
+               or (self.config["offroad_terminal"] and not self.vehicle.on_road)
+
+    def _agent_is_terminal(self, vehicle: Vehicle) -> bool:
+        """The episode is over when a collision occurs or when the access ramp has been passed."""
+        return vehicle.crashed \
+               or self.steps >= self.config["duration"] * self.config["policy_frequency"] \
+               or self.has_arrived(vehicle)
+
+    def _info(self, obs: np.ndarray, action: int) -> dict:
+        info = super()._info(obs, action)
+        info["agents_rewards"] = tuple(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles)
+        info["agents_dones"] = tuple(self._agent_is_terminal(vehicle) for vehicle in self.controlled_vehicles)
         return info
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
@@ -192,6 +206,27 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
             # Allocate one goal to each vehicle
             vehicle.goal = self.goals[self.np_random.randint(self.NUM_ROADS)]
 
+    def _reward(self, action: int) -> float:
+        # Cooperative multi-agent reward
+        return sum(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles) \
+               / len(self.controlled_vehicles)
+
+    def _agent_reward(self, action: int, vehicle: Vehicle) -> float:
+        scaled_speed = utils.lmap(vehicle.speed, self.config["reward_speed_range"], [0, 1])
+        reward = self.config["collision_reward"] * vehicle.crashed \
+                 + self.config["high_speed_reward"] * (vehicle.speed - self.config["speed_to_reward"])
+
+        reward = self.config["arrived_reward"] if self.has_arrived(vehicle) else reward
+        if self.config["normalize_reward"]:
+            reward = utils.lmap(reward, [self.config["collision_reward"], self.config["arrived_reward"]], [0, 1])
+        reward = 0 if not vehicle.on_road else reward
+        return reward
+
+    def has_arrived(self, vehicle: Vehicle, exit_distance: float = 25) -> bool:
+        return "il" in vehicle.lane_index[0] \
+               and "o" in vehicle.lane_index[1] \
+               and vehicle.lane.local_coordinates(vehicle.position)[0] >= exit_distance
+
     def compute_reward(self, achieved_goal: np.ndarray, desired_goal: np.ndarray, info: dict, p: float = 0.5) -> float:
         """
         Proximity to the goal is rewarded
@@ -206,23 +241,8 @@ class DeadlockEnv(AbstractEnv, GoalEnv):
         """
         return -np.power(np.dot(np.abs(achieved_goal - desired_goal), np.array(self.config["reward_weights"])), p)
 
-    # TODO: return one value for each agent in a tuple/list
-    def _reward(self, action: np.ndarray) -> np.array:
-        obs = self.obs if isinstance(self.obs, tuple) else (self.obs,)
-        return np.array([self.compute_reward(agent_obs['achieved_goal'], agent_obs['desired_goal'], {})
-                     for agent_obs in obs])
-
     def _is_success(self, achieved_goal: np.ndarray, desired_goal: np.ndarray) -> bool:
         return self.compute_reward(achieved_goal, desired_goal, {}) > -self.config["success_goal_reward"]
-
-    # TODO: return one value for each agent in a tuple/list
-    def _is_terminal(self) -> bool:
-        """The episode is over if the ego vehicle crashed or the goal is reached."""
-        time = self.steps >= self.config["duration"]
-        crashed = any(vehicle.crashed for vehicle in self.controlled_vehicles)
-        obs = self.obs if isinstance(self.obs, tuple) else (self.obs,)
-        success = all(self._is_success(agent_obs['achieved_goal'], agent_obs['desired_goal']) for agent_obs in obs)
-        return time or crashed or success
 
 
 class DeadlockEnv8(DeadlockEnv):
