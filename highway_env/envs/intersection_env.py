@@ -26,6 +26,7 @@ class IntersectionEnv(AbstractEnv):
     ROAD_LENGTH = 100  # [m]
     MIN_DIST_VEHICLES = 2
     MAX_DIST_VEHICLES = 10
+    DISTANCE_BETWEEN_ROADS = 5
 
     @classmethod
     def default_config(cls) -> dict:
@@ -53,6 +54,7 @@ class IntersectionEnv(AbstractEnv):
             },
             "duration": 13,  # [s]
             "destination": "o1",
+            "hash_intersection": False,
             "controlled_vehicles": 1,
             "initial_vehicle_count": 10,
             "spawn_probability": 0.6,
@@ -105,7 +107,11 @@ class IntersectionEnv(AbstractEnv):
         return info
 
     def _reset(self) -> None:
-        self._make_road()
+        if not self.config.get("hash_intersection", False):
+            self._make_road()
+        else:
+            self._make_hash_road()
+
         self._make_vehicles(self.config["initial_vehicle_count"])
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
@@ -180,6 +186,69 @@ class IntersectionEnv(AbstractEnv):
 
         road = RegulatedRoad(network=net, np_random=self.np_random, record_history=self.config["show_trajectories"])
         self.road = road
+
+    def _make_hash_road(self) -> None:
+        """
+        Make an 4-way intersection.
+
+        The horizontal road has the right of way. More precisely, the levels of priority are:
+            - 2 for right-turns
+            - 1 for straight lanes
+            - 0 for left-turns
+
+        The code for nodes in the road network is:
+        (o:outer | (i:inner | c:central) + [r:right, l:left]) + (0:south | 1:west | 2:north | 3:east)
+
+        :return: the intersection road
+        """
+        lane_width = AbstractLane.DEFAULT_WIDTH
+        turn_radius = lane_width  # [m}
+        outer_distance = turn_radius + lane_width / 2 + self.DISTANCE_BETWEEN_ROADS / 2
+        inner_distance = -turn_radius + lane_width / 2 + self.DISTANCE_BETWEEN_ROADS / 2
+        access_length = self.ROAD_LENGTH  # [m]
+        lateral_offset = lane_width / 2 + self.DISTANCE_BETWEEN_ROADS / 2
+        max_priority = 2
+
+        net = RoadNetwork()
+        n, c, s = LineType.NONE, LineType.CONTINUOUS, LineType.STRIPED
+        for corner in range(self.NUM_ROADS):
+            angle = np.radians(90 * corner)
+            rotation = np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
+            # Incoming
+            start = rotation @ np.array([lateral_offset, access_length + outer_distance])
+            end = rotation @ np.array([lateral_offset, outer_distance])
+            net.add_lane("o" + str(corner), "ir" + str(corner),
+                         StraightLane(start, end, line_types=[c, c], priority=max_priority, speed_limit=10))
+            # Right turn
+            r_center = rotation @ (np.array([outer_distance, outer_distance]))
+            net.add_lane("ir" + str(corner), "il" + str((corner - 1) % self.NUM_ROADS),
+                         CircularLane(r_center, turn_radius, angle + np.radians(180), angle + np.radians(270),
+                                      line_types=[n, c], priority=max_priority, speed_limit=10))
+            # Left turn
+            l_center = rotation @ (np.array([inner_distance, -inner_distance]))
+            net.add_lane("cr" + str((corner - 1) % self.NUM_ROADS), "cl" + str((corner - 2) % self.NUM_ROADS),
+                         CircularLane(l_center, turn_radius, angle + np.radians(0), angle + np.radians(-90),
+                                      clockwise=False, line_types=[c, s], priority=max_priority - 2, speed_limit=10))
+
+            # Straight
+            start = rotation @ np.array([lateral_offset, outer_distance])
+            mid1 = rotation @ np.array([lateral_offset, inner_distance])
+            mid2 = rotation @ np.array([lateral_offset, -inner_distance])
+            end = rotation @ np.array([lateral_offset, -outer_distance])
+            net.add_lane("ir" + str(corner), "cl" + str((corner - 1) % self.NUM_ROADS),
+                         StraightLane(start, mid1, line_types=[n, s], priority=max_priority - 1, speed_limit=10))
+            net.add_lane("cl" + str((corner - 1) % self.NUM_ROADS), "cr" + str((corner - 1) % self.NUM_ROADS),
+                         StraightLane(mid1, mid2, line_types=[c, c], priority=max_priority - 1, speed_limit=10))
+            net.add_lane("cr" + str((corner - 1) % self.NUM_ROADS), "il" + str((corner + 2) % self.NUM_ROADS),
+                         StraightLane(mid2, end, line_types=[n, s], priority=max_priority - 1, speed_limit=10))
+            # Exit
+            start = rotation @ np.flip([lateral_offset, access_length + outer_distance], axis=0)
+            end = rotation @ np.flip([lateral_offset, outer_distance], axis=0)
+            net.add_lane("il" + str((corner - 1) % self.NUM_ROADS), "o" + str((corner - 1) % self.NUM_ROADS),
+                         StraightLane(end, start, line_types=[c, c], priority=max_priority, speed_limit=10))
+
+            road = RegulatedRoad(network=net, np_random=self.np_random, record_history=self.config["show_trajectories"])
+            self.road = road
 
     def _make_vehicles(self, n_vehicles: int = 10) -> None:
         """
@@ -301,12 +370,24 @@ class MultiAgentIntersectionEnv(IntersectionEnv):
         })
         return config
 
+class HashIntersectionEnv(MultiAgentIntersectionEnv):
+    @classmethod
+    def default_config(cls) -> dict:
+        config = super().default_config()
+        config.update({
+            "hash_intersection": True
+        })
+        return config
 
 class MultiAgentDeadlockIntersectionEnv(MultiAgentIntersectionEnv):
     END_ROAD_OFFSET = -7.5
     MIN_DIST_VEHICLES = 2
     MAX_DIST_VEHICLES = 3
 
+class HashDeadlockIntersectionEnv(HashIntersectionEnv):
+    END_ROAD_OFFSET = -7.5
+    MIN_DIST_VEHICLES = 2
+    MAX_DIST_VEHICLES = 3
 
 class ContinuousIntersectionEnv(IntersectionEnv):
     @classmethod
@@ -355,4 +436,14 @@ register(
 register(
     id='intersection-multi-agent-deadlock-v0',
     entry_point='highway_env.envs:MultiAgentDeadlockIntersectionEnv',
+)
+
+register(
+    id='hash-intersection-v0',
+    entry_point='highway_env.envs:HashIntersectionEnv',
+)
+
+register(
+    id='hash-deadlock-v0',
+    entry_point='highway_env.envs:HashDeadlockIntersectionEnv',
 )
