@@ -60,7 +60,7 @@ class IntersectionEnv(AbstractEnv):
             "spawn_probability": 0.6,
             "screen_width": 600,
             "screen_height": 600,
-            "centering_position": [0.5, 0.6],
+            "centering_position": [0.5, 0.5],
             "scaling": 5.5 * 1.3,
             "collision_reward": -100,
             "high_speed_reward": 1,
@@ -228,7 +228,7 @@ class IntersectionEnv(AbstractEnv):
             l_center = rotation @ (np.array([inner_distance, -inner_distance]))
             net.add_lane("cr" + str((corner - 1) % self.NUM_ROADS), "cl" + str((corner - 2) % self.NUM_ROADS),
                          CircularLane(l_center, turn_radius, angle + np.radians(0), angle + np.radians(-90),
-                                      clockwise=False, line_types=[c, s], priority=max_priority - 2, speed_limit=10))
+                                      clockwise=False, line_types=[n, n], priority=max_priority - 2, speed_limit=10))
 
             # Straight
             start = rotation @ np.array([lateral_offset, outer_distance])
