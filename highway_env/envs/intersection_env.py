@@ -74,8 +74,8 @@ class IntersectionEnv(AbstractEnv):
 
     def _reward(self, action: int) -> float:
         # Cooperative multi-agent reward
-        return sum(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles) \
-               / len(self.controlled_vehicles)
+        num_vehicles_out = sum(1 if self.has_arrived(vehicle, exit_distance=1) else 0 for vehicle in self.controlled_vehicles)
+        return num_vehicles_out >= len(self.controlled_vehicles) / 2
 
     def _agent_reward(self, action: int, vehicle: Vehicle) -> float:
         scaled_speed = utils.lmap(vehicle.speed, self.config["reward_speed_range"], [0, 1])
