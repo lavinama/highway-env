@@ -60,3 +60,6 @@ sanity_test_result.xml
 pip-wheel-metadata/
 
 
+# agent models
+rl-agents/
+stable-baselines3/
