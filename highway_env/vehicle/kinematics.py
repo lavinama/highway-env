@@ -10,7 +10,6 @@ from highway_env.utils import Vector
 
 
 class Vehicle(RoadObject):
-
     """
     A moving vehicle on a road, and its kinematics.
 
@@ -27,7 +26,7 @@ class Vehicle(RoadObject):
     MAX_SPEED = 40.
     """ Maximum reachable speed [m/s] """
     HISTORY_SIZE = 30
-    """ Length of the vehicle state history, for trajectory display"""
+    """ Length of the vehicle state history, for trajectory display """
 
     def __init__(self,
                  road: Road,
@@ -38,7 +37,7 @@ class Vehicle(RoadObject):
         super().__init__(road, position, heading, speed)
         self.prediction_type = predition_type
         self.action = {'steering': 0, 'acceleration': 0}
-        self.crashed = False
+        self.crashed = False # Whether or not the vehicle has crashed
         self.impact = None
         self.log = []
         self.history = deque(maxlen=self.HISTORY_SIZE)

@@ -40,8 +40,8 @@ class ControlledVehicle(Vehicle):
                  target_speed: float = None,
                  route: Route = None):
         super().__init__(road, position, heading, speed)
-        self.target_lane_index = target_lane_index or self.lane_index
-        self.target_speed = target_speed or self.speed
+        self.target_lane_index = target_lane_index or self.lane_index # Lane where the vehicle wants to be
+        self.target_speed = target_speed or self.speed # Desired spped of the vehicle
         self.route = route
 
     @classmethod
