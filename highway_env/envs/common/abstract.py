@@ -18,6 +18,8 @@ from highway_env.vehicle.kinematics import Vehicle
 
 Observation = np.ndarray
 
+# Create ego and npc rewards
+
 class AbstractEnv(gym.Env):
 
     """

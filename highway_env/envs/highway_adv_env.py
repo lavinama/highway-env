@@ -10,9 +10,9 @@ from highway_env.vehicle.controller import ControlledVehicle
 from highway_env.vehicle.kinematics import Vehicle
 
 
-class HighwayEnv(AbstractEnv):
+class HighwayAdvEnv(AbstractEnv):
     """
-    A highway driving environment.
+    An adversarial highway driving environment where we have the reward function of the ego and npc vehicle.
 
     The vehicle is driving on a straight highway with several lanes, and is rewarded for reaching a high speed,
     staying on the rightmost lanes and avoiding collisions.
@@ -61,6 +61,7 @@ class HighwayEnv(AbstractEnv):
         other_per_controlled = near_split(self.config["vehicles_count"], num_bins=self.config["controlled_vehicles"])
 
         self.controlled_vehicles = []
+        i = 0
         for others in other_per_controlled:
             vehicle = Vehicle.create_random(
                 self.road,
@@ -69,6 +70,13 @@ class HighwayEnv(AbstractEnv):
                 spacing=self.config["ego_spacing"]
             )
             vehicle = self.action_type.vehicle_class(self.road, vehicle.position, vehicle.heading, vehicle.speed)
+            if i == 0:
+                # Let the first vehicle created be the ego vehicle
+                vehicle.ego = True
+            else:
+                # Let the following vehicles created be npcs
+                vehicle.npc = True
+            i += 1
             self.controlled_vehicles.append(vehicle)
             self.road.vehicles.append(vehicle)
 
@@ -83,24 +91,30 @@ class HighwayEnv(AbstractEnv):
         :param action: the last action performed
         :return: the corresponding reward
         """
-        neighbours = self.road.network.all_side_lanes(self.vehicle.lane_index)
-        lane = self.vehicle.target_lane_index[2] if isinstance(self.vehicle, ControlledVehicle) \
-            else self.vehicle.lane_index[2]
-        # Use forward speed rather than speed, see https://github.com/eleurent/highway-env/issues/268
-        forward_speed = self.vehicle.speed * np.cos(self.vehicle.heading)
-        scaled_speed = utils.lmap(forward_speed, self.config["reward_speed_range"], [0, 1])
-        reward = \
-            + self.config["collision_reward"] * self.vehicle.crashed \
-            + self.config["right_lane_reward"] * lane / max(len(neighbours) - 1, 1) \
-            + self.config["high_speed_reward"] * np.clip(scaled_speed, 0, 1)
-        reward = utils.lmap(reward,
-                          [self.config["collision_reward"],
-                           self.config["high_speed_reward"] + self.config["right_lane_reward"]],
-                          [0, 1])
-        reward = 0 if not self.vehicle.on_road else reward
+        if self.vehicle.ego:
+            reward = self._reward_ego(action)
+        elif self.vehicle.npc:
+            reward = -self._reward_ego(action)
+        else:
+            neighbours = self.road.network.all_side_lanes(self.vehicle.lane_index)
+            lane = self.vehicle.target_lane_index[2] if isinstance(self.vehicle, ControlledVehicle) \
+                else self.vehicle.lane_index[2]
+            # Use forward speed rather than speed, see https://github.com/eleurent/highway-env/issues/268
+            forward_speed = self.vehicle.speed * np.cos(self.vehicle.heading)
+            scaled_speed = utils.lmap(forward_speed, self.config["reward_speed_range"], [0, 1])
+            reward = \
+                + self.config["collision_reward"] * self.vehicle.crashed \
+                + self.config["right_lane_reward"] * lane / max(len(neighbours) - 1, 1) \
+                + self.config["high_speed_reward"] * np.clip(scaled_speed, 0, 1)
+            reward = utils.lmap(reward,
+                            [self.config["collision_reward"],
+                            self.config["high_speed_reward"] + self.config["right_lane_reward"]],
+                            [0, 1])
+            reward = 0 if not self.vehicle.on_road else reward
         return reward
 
-    def reward_ego(self, action: Action) -> float:
+
+    def _reward_ego(self, action: Action) -> float:
         """
         The reward is defined to give a very negative reward in case of a collision 
         and also foster driving at high speed, on the rightmost lanes, and to avoid collisions.
@@ -110,7 +124,6 @@ class HighwayEnv(AbstractEnv):
         if self.vehicle.crashed:
             # collision happened
             reward = -50
-            return reward
         else:
             neighbours = self.road.network.all_side_lanes(self.vehicle.lane_index)
             lane = self.vehicle.target_lane_index[2] if isinstance(self.vehicle, ControlledVehicle) \
@@ -127,7 +140,7 @@ class HighwayEnv(AbstractEnv):
                                 self.config["high_speed_reward"] + self.config["right_lane_reward"]],
                                 [0, 1])
             reward = 0 if not self.vehicle.on_road else reward
-            return reward
+        return reward
 
     def _is_terminal(self) -> bool:
         """The episode is over if the ego vehicle crashed or the time is out."""
@@ -140,7 +153,7 @@ class HighwayEnv(AbstractEnv):
         return float(self.vehicle.crashed)
 
 
-class HighwayEnvFast(HighwayEnv):
+class HighwayAdvFast(HighwayAdvEnv):
     """
     A variant of highway-v0 with faster execution:
         - lower simulation frequency
@@ -168,11 +181,11 @@ class HighwayEnvFast(HighwayEnv):
 
 
 register(
-    id='highway-v0',
-    entry_point='highway_env.envs:HighwayEnv',
+    id='highwayadv-v0',
+    entry_point='highway_env.envs:HighwayAdvEnv',
 )
 
 register(
-    id='highway-fast-v0',
-    entry_point='highway_env.envs:HighwayEnvFast',
+    id='highwayadv-fast-v0',
+    entry_point='highway_env.envs:HighwayAdvEnvFast',
 )

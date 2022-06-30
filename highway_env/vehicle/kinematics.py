@@ -41,6 +41,8 @@ class Vehicle(RoadObject):
         self.impact = None
         self.log = []
         self.history = deque(maxlen=self.HISTORY_SIZE)
+        self.ego = False # Flag to determine whether vehicle is the ego vehicle
+        self.npc = False # Flag to determine whether vehicle is an npc vehicle
 
     @classmethod
     def create_random(cls, road: Road,
