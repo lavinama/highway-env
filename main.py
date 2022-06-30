@@ -4,11 +4,9 @@ Main script where the file runs
 
 import gym
 import highway_env
+from matplotlib import pyplot as plt
+
+import pprint
 
 env = gym.make("highway-v0")
-
-done = False
-while not done:
-    action = ... # Your agent code here
-    obs, reward, done, info = env.step(action)
-    env.render()
+pprint.pprint(env.config)
