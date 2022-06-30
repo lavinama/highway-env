@@ -78,7 +78,7 @@ class HighwayAdvEnv(AbstractEnv):
                 vehicle.npc = True
             i += 1
             self.controlled_vehicles.append(vehicle)
-            self.road.vehicles.append(vehicle)
+            self.road.vehicles.append(vehicle)  
 
             for _ in range(others):
                 vehicle = other_vehicles_type.create_random(self.road, spacing=1 / self.config["vehicles_density"])
