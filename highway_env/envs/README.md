@@ -1,6 +1,6 @@
 *Note: Only the highway and intersection environments allow for multi-agent settings*
 ### Default environment configuration `common/abstract.py`
-```
+```python
 {
     "observation": {
         "type": "Kinematics"
@@ -24,7 +24,7 @@
 ```
 ### Intersection environment configuration `intersection_env.py`
 ##### "intersection-v0"
-```
+```python
 {
     "observation": {
         "type": "Kinematics",
@@ -64,7 +64,7 @@
 }
 ```
 ##### "intersection-v1"
-```
+```python
 {
     "observation": {
         "type": "Kinematics",
@@ -81,7 +81,7 @@
 }
 ```
 ##### "intersection-multi-agent-v0" 
-```
+```python
 {
     "action": {
             "type": "MultiAgentAction",
@@ -101,11 +101,11 @@
 }
 ```
 ##### "intersection-multi-agent-v1"
-```
+```python
 # Same as "intersection-multi-agent-v0" 
 ```
 ### Merge environment configuration `merge_env.py`
-```
+```python
 # The default config plus
 {
     "collision_reward": -1,
