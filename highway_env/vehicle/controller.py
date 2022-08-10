@@ -230,6 +230,8 @@ class MDPVehicle(ControlledVehicle):
         self.target_speeds = np.array(target_speeds) if target_speeds is not None else self.DEFAULT_TARGET_SPEEDS
         self.speed_index = self.speed_to_index(self.target_speed)
         self.target_speed = self.index_to_speed(self.speed_index)
+        self.ego = False
+        self.colour = "green"
 
     def act(self, action: Union[dict, str] = None) -> None:
         """
