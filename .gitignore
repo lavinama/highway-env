@@ -21,3 +21,6 @@ _build
 
 # Outputs
 **/out/*
+
+# Google Drive sync files
+.tmp.driveupload/*
