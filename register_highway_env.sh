@@ -3,24 +3,24 @@
 
 # >>> conda initialize >>>
 # !! Contents within this block are managed by 'conda init' !!
-__conda_setup="$('/vol/bitbucket/ml821/anaconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
+__conda_setup="$('/home/mario/anaconda3/bin/conda' 'shell.bash' 'hook' 2> /dev/null)"
 if [ $? -eq 0 ]; then
     eval "$__conda_setup"
 else
-    if [ -f "/vol/bitbucket/ml821/anaconda3/etc/profile.d/conda.sh" ]; then
-        . "/vol/bitbucket/ml821/anaconda3/etc/profile.d/conda.sh"
+    if [ -f "/home/mario/anaconda3/etc/profile.d/conda.sh" ]; then
+        . "/home/mario/anaconda3/etc/profile.d/conda.sh"
     else
-        export PATH="/vol/bitbucket/ml821/anaconda3/bin:$PATH"
+        export PATH="/home/mario/anaconda3/bin:$PATH"
     fi
 fi
 unset __conda_setup
-export PATH=/vol/bitbucket/ml821/anaconda/bin:$PATH
+export PATH=/home/mario/anaconda3/bin:$PATH
 
 conda activate highway_env
-source /vol/cuda/11.4.120-cudnn8.2.4/setup.sh
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/vol/cuda/TensorRT-6.0.1.8/lib
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/vol/cuda/11.4.120-cudnn8.2.4/targets/x86_64-linux/lib
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/vol/cuda/11.4.120-cudnn8.2.4/x86_64-linux-gnu
+# source /vol/cuda/11.4.120-cudnn8.2.4/setup.sh
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/vol/cuda/TensorRT-6.0.1.8/lib
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/vol/cuda/11.4.120-cudnn8.2.4/targets/x86_64-linux/lib
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/vol/cuda/11.4.120-cudnn8.2.4/x86_64-linux-gnu
 
 TERM=vt100 # or TERM=xterm
 
