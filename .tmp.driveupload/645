@@ -1,0 +1,5 @@
+0000000000000000000000000000000000000000 31881fbe45fd05dbd3203bb35419ff5fb1b7bc09 lavinama <mario.lavina00@gmail.com> 1658428515 +0100	clone: from https://github.com/lavinama/highway-env.git
+31881fbe45fd05dbd3203bb35419ff5fb1b7bc09 8e2d02a5e9419201a35d054af097dc4ebacc31ac lavinama <mario.lavina00@gmail.com> 1658432752 +0100	checkout: moving from master to feat/ma/deadlock
+8e2d02a5e9419201a35d054af097dc4ebacc31ac 31881fbe45fd05dbd3203bb35419ff5fb1b7bc09 lavinama <mario.lavina00@gmail.com> 1658500758 +0100	checkout: moving from feat/ma/deadlock to master
+31881fbe45fd05dbd3203bb35419ff5fb1b7bc09 8e2d02a5e9419201a35d054af097dc4ebacc31ac lavinama <mario.lavina00@gmail.com> 1659719285 +0200	checkout: moving from master to adv-highway-env
+8e2d02a5e9419201a35d054af097dc4ebacc31ac 94ff105d958b8e4c49b522777356c1cd6358d8f4 lavinama <mario.lavina00@gmail.com> 1660130469 +0200	commit: Created intersection adv
