@@ -32,5 +32,7 @@ TERM=vt100 # or TERM=xterm
 
 
 # For registering highway_env gym environment
-cd highway_env/envs/
+# cd highway_env/envs/
+# python __init__.py
+cd highway_env
 python __init__.py
