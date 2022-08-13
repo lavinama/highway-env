@@ -3,7 +3,7 @@ from gym import Env
 from gym.envs.registration import register
 import numpy as np
 
-from highway_env.envs import Action
+from highway_env.envs.common.action import Action
 from highway_env.envs.common.abstract import AbstractEnv
 from highway_env.envs.common.observation import MultiAgentObservation, observation_factory
 from highway_env.road.lane import StraightLane, LineType
