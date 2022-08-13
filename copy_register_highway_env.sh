@@ -17,10 +17,10 @@ unset __conda_setup
 export PATH=/home/mario/anaconda/bin:$PATH
 
 conda activate highway_env
-source /home/cuda/11.4.120-cudnn8.2.4/setup.sh
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cuda/TensorRT-6.0.1.8/lib
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cuda/11.4.120-cudnn8.2.4/targets/x86_64-linux/lib
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cuda/11.4.120-cudnn8.2.4/x86_64-linux-gnu
+# source /home/cuda/11.4.120-cudnn8.2.4/setup.sh
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cuda/TensorRT-6.0.1.8/lib
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cuda/11.4.120-cudnn8.2.4/targets/x86_64-linux/lib
+# export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/home/cuda/11.4.120-cudnn8.2.4/x86_64-linux-gnu
 
 TERM=vt100 # or TERM=xterm
 
@@ -33,4 +33,4 @@ TERM=vt100 # or TERM=xterm
 
 # For registering highway_env gym environment
 cd highway_env/envs/
-python __init__.py.py
+python __init__.py
