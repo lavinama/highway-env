@@ -1,4 +1,4 @@
-from highway_env.envs.highway_env_script import *
+# from highway_env.envs.highway_env_script import *
 from highway_env.envs.merge_env import *
 from highway_env.envs.parking_env import *
 from highway_env.envs.summon_env import *
