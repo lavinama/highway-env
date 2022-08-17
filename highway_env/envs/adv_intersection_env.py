@@ -309,7 +309,7 @@ class AdvIntersectionEnv(AbstractEnv):
                 ego_vehicle.ego = True
             else:
                 ego_vehicle.ego = False
-                # ego_vehicle.colour = "blue"
+                
             
 
             self.road.vehicles.append(ego_vehicle)
