@@ -304,13 +304,13 @@ class AdvIntersectionEnv(AbstractEnv):
                 pass
             
             # Classify the ego_vehicle as ego or npc
-            """
+            
             if ego_id == 0:
                 ego_vehicle.ego = True
             else:
                 ego_vehicle.ego = False
-                ego_vehicle.colour = "blue"
-            """
+                # ego_vehicle.colour = "blue"
+            
 
             self.road.vehicles.append(ego_vehicle)
             self.controlled_vehicles.append(ego_vehicle)
