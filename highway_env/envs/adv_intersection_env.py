@@ -27,7 +27,8 @@ class AdvIntersectionEnv(AbstractEnv):
     MIN_DIST_VEHICLES = 2
     MAX_DIST_VEHICLES = 10
     DISTANCE_BETWEEN_ROADS = 5
-
+    ZERO_SUM_REWARDS = False
+    
     @classmethod
     def default_config(cls) -> dict:
         config = super().default_config()
@@ -76,7 +77,7 @@ class AdvIntersectionEnv(AbstractEnv):
         # Cooperative multi-agent reward
         total_reward = sum(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles) \
                / len(self.controlled_vehicles)
-        print("Total reward:", total_reward)
+        # print("Total reward:", total_reward)
         return total_reward
 
     def _agent_reward(self, action: int, vehicle: Vehicle) -> float:
@@ -88,11 +89,12 @@ class AdvIntersectionEnv(AbstractEnv):
         if self.config["normalize_reward"]:
             reward = utils.lmap(reward, [self.config["collision_reward"], self.config["arrived_reward"]], [0, 1])
         reward = 0 if not vehicle.on_road else reward
-        if vehicle.ego is False:
-            print("NPC reward: ", -reward)
-            # If NPC, then return the adversarial reward
-            return -reward
-        print("Ego rewards: ", reward)
+        if self.ZERO_SUM_REWARDS:
+            if vehicle.ego is False:
+                print("NPC reward: ", -reward)
+                # If NPC, then return the adversarial reward
+                return -reward
+            print("Ego rewards: ", reward)
         return reward
 
     def _is_terminal(self) -> bool:
@@ -114,7 +116,7 @@ class AdvIntersectionEnv(AbstractEnv):
         info = super()._info(obs, action)
         info["agents_rewards"] = tuple(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles)
         info["agents_dones"] = tuple(self._agent_is_terminal(vehicle) for vehicle in self.controlled_vehicles)
-        print("info[agents_dones]", info["agents_dones"])
+        info["agent_names"] = tuple(vehicle.name for vehicle in self.controlled_vehicles)
         return info
 
     def _reset(self) -> None:
@@ -318,8 +320,10 @@ class AdvIntersectionEnv(AbstractEnv):
             
             if ego_id == 0:
                 ego_vehicle.ego = True
+                ego_vehicle.name = "ego"
             else:
                 ego_vehicle.ego = False
+                ego_vehicle.name = "npc_" + str(ego_id)
 
             self.road.vehicles.append(ego_vehicle)
             self.controlled_vehicles.append(ego_vehicle)
