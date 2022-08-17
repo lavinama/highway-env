@@ -109,12 +109,12 @@ class AdvIntersectionEnv(AbstractEnv):
 
     def _info(self, obs: np.ndarray, action: int) -> dict:
         """
-        obs: observations
-        :param: info: dictionary containing information about agents (rewards and dones)
+        Return a dictionary of additional information
         """
         info = super()._info(obs, action)
         info["agents_rewards"] = tuple(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles)
         info["agents_dones"] = tuple(self._agent_is_terminal(vehicle) for vehicle in self.controlled_vehicles)
+        print("info[agents_dones]", info["agents_dones"])
         return info
 
     def _reset(self) -> None:
