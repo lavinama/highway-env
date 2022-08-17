@@ -74,8 +74,10 @@ class AdvIntersectionEnv(AbstractEnv):
 
     def _reward(self, action: int) -> float:
         # Cooperative multi-agent reward
-        return sum(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles) \
+        total_reward = sum(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles) \
                / len(self.controlled_vehicles)
+        print("Total reward:", total_reward)
+        return total_reward
 
     def _agent_reward(self, action: int, vehicle: Vehicle) -> float:
         scaled_speed = utils.lmap(vehicle.speed, self.config["reward_speed_range"], [0, 1])
@@ -87,8 +89,10 @@ class AdvIntersectionEnv(AbstractEnv):
             reward = utils.lmap(reward, [self.config["collision_reward"], self.config["arrived_reward"]], [0, 1])
         reward = 0 if not vehicle.on_road else reward
         if vehicle.ego is False:
+            print("NPC reward: ", -reward)
             # If NPC, then return the adversarial reward
-            return - reward
+            return -reward
+        print("Ego rewards: ", reward)
         return reward
 
     def _is_terminal(self) -> bool:
