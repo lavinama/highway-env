@@ -86,6 +86,9 @@ class AdvIntersectionEnv(AbstractEnv):
         if self.config["normalize_reward"]:
             reward = utils.lmap(reward, [self.config["collision_reward"], self.config["arrived_reward"]], [0, 1])
         reward = 0 if not vehicle.on_road else reward
+        if vehicle.ego is False:
+            # If NPC, then return the adversarial reward
+            return - reward
         return reward
 
     def _is_terminal(self) -> bool:
@@ -101,6 +104,10 @@ class AdvIntersectionEnv(AbstractEnv):
             or self.has_arrived(vehicle)
 
     def _info(self, obs: np.ndarray, action: int) -> dict:
+        """
+        obs: observations
+        :param: info: dictionary containing information about agents (rewards and dones)
+        """
         info = super()._info(obs, action)
         info["agents_rewards"] = tuple(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles)
         info["agents_dones"] = tuple(self._agent_is_terminal(vehicle) for vehicle in self.controlled_vehicles)
@@ -309,8 +316,6 @@ class AdvIntersectionEnv(AbstractEnv):
                 ego_vehicle.ego = True
             else:
                 ego_vehicle.ego = False
-                
-            
 
             self.road.vehicles.append(ego_vehicle)
             self.controlled_vehicles.append(ego_vehicle)
