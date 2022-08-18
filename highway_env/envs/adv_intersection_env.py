@@ -28,10 +28,6 @@ class AdvIntersectionEnv(AbstractEnv):
     MIN_DIST_VEHICLES = 2
     MAX_DIST_VEHICLES = 10
     DISTANCE_BETWEEN_ROADS = 5
-    # Added Attributes
-    ZERO_SUM_REWARDS = False
-    FAILMAKER_ADVRL = False
-    CHECK_REG_ROAD = True
 
     @classmethod
     def default_config(cls) -> dict:
@@ -75,7 +71,10 @@ class AdvIntersectionEnv(AbstractEnv):
             "rule_break_reward": -50,
             "reward_speed_range": [7.0, 9.0],
             "normalize_reward": False,
-            "offroad_terminal": False
+            "offroad_terminal": False,
+            "zero_sum_rewards": False,
+            "failmaker_advrl": False,
+            "check_reg_road": False,
         })
         return config
 
@@ -123,19 +122,19 @@ class AdvIntersectionEnv(AbstractEnv):
         if self.config["normalize_reward"]:
             reward = utils.lmap(reward, [self.config["collision_reward"], self.config["arrived_reward"]], [0, 1])
         reward = 0 if not vehicle.on_road else reward
-        if self.ZERO_SUM_REWARDS:
+        if self.config["zero_sum_rewards"]:
             # r_npc = - r_ego
             if vehicle.ego is False:
                 print("NPC reward: ", -reward)
                 return -reward
             print("Ego rewards: ", reward)
-        if self.FAILMAKER_ADVRL:
+        if self.config["failmaker_advrl"]:
             # reward function of FailMaker_AdvRL
             if vehicle.ego is False:
                 pers_reward = reward
                 adv_reward = self.calc_adv_reward(vehicle)
                 reward = pers_reward + self.config["scaling_factor"] * adv_reward
-        if self.CHECK_REG_ROAD:
+        if self.config["check_reg_road"]:
             # reward function encourages to break rules of the road
             if vehicle.ego is False:
                 pers_reward = reward
@@ -243,7 +242,7 @@ class AdvIntersectionEnv(AbstractEnv):
             net.add_lane("il" + str((corner - 1) % self.NUM_ROADS), "o" + str((corner - 1) % self.NUM_ROADS),
                          StraightLane(end, start, line_types=[n, c], priority=priority, speed_limit=10))
 
-        if self.CHECK_REG_ROAD:
+        if self.config["check_reg_road"]:
             road = CheckRegulatedRoad(network=net, np_random=self.np_random, record_history=self.config["show_trajectories"])
         else:
             road = RegulatedRoad(network=net, np_random=self.np_random, record_history=self.config["show_trajectories"])
