@@ -67,10 +67,12 @@ class AdvIntersectionEnv(AbstractEnv):
             "screen_height": 600,
             "centering_position": [0.5, 0.5],
             "scaling": 5.5 * 1.3,
-            "collision_reward": -100, # -100
+            "scaling_factor": 1,
+            "collision_reward": -100,
             "high_speed_reward": 1,
             "speed_to_reward": 3.5,
-            "arrived_reward": 30, # 50
+            "arrived_reward": 30,
+            "rule_break_reward": -50,
             "reward_speed_range": [7.0, 9.0],
             "normalize_reward": False,
             "offroad_terminal": False
@@ -102,6 +104,11 @@ class AdvIntersectionEnv(AbstractEnv):
         adv_reward = contr/total_contr
         return adv_reward
 
+    def calc_rule_break(self, vehicle: Vehicle) -> float:
+        if self.road.rule_broken:
+            adv_reward = self.config["rule_break_reward"]
+        return adv_reward
+        
     def _agent_reward(self, action: int, vehicle: Vehicle) -> float:
         # Add the previous positions of the vehicle
         vehicle.prev_positions.append(vehicle.position)
@@ -115,16 +122,23 @@ class AdvIntersectionEnv(AbstractEnv):
             reward = utils.lmap(reward, [self.config["collision_reward"], self.config["arrived_reward"]], [0, 1])
         reward = 0 if not vehicle.on_road else reward
         if self.ZERO_SUM_REWARDS:
+            # r_npc = - r_ego
             if vehicle.ego is False:
                 print("NPC reward: ", -reward)
-                # If NPC, then return the adversarial reward
                 return -reward
             print("Ego rewards: ", reward)
         if self.FAILMAKER_ADVRL:
+            # reward function of FailMaker_AdvRL
             if vehicle.ego is False:
                 pers_reward = reward
                 adv_reward = self.calc_adv_reward(vehicle)
-                reward = pers_reward + 0.95 * adv_reward
+                reward = pers_reward + self.config["scaling_factor"] * adv_reward
+        if self.CHECK_REG_ROAD:
+            # reward function encourages to break rules of the road
+            if vehicle.ego is False:
+                pers_reward = reward
+                adv_reward = self.calc_rule_break(vehicle)
+                reward = - pers_reward + self.config["scaling_factor"] * adv_reward
         return reward
 
     def _is_terminal(self) -> bool:
@@ -349,7 +363,6 @@ class AdvIntersectionEnv(AbstractEnv):
                 pass
             
             # Classify the ego_vehicle as ego or npc
-            
             if ego_id == 0:
                 ego_vehicle.ego = True
                 ego_vehicle.name = "ego"
