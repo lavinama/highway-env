@@ -161,6 +161,7 @@ class AdvIntersectionEnv(AbstractEnv):
         info["agents_rewards"] = tuple(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles)
         info["agents_dones"] = tuple(self._agent_is_terminal(vehicle) for vehicle in self.controlled_vehicles)
         info["agents_crashed"] = tuple(vehicle.crashed for vehicle in self.controlled_vehicles)
+        info["agents_arrived"] = tuple(self.has_arrived(vehicle) for vehicle in self.controlled_vehicles)
         info["agent_names"] = tuple(vehicle.name for vehicle in self.controlled_vehicles)
         return info
 
