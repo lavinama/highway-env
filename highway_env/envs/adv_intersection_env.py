@@ -107,6 +107,8 @@ class AdvIntersectionEnv(AbstractEnv):
     def calc_rule_break(self, vehicle: Vehicle) -> float:
         if self.road.rule_broken:
             adv_reward = self.config["rule_break_reward"]
+        else:
+            adv_reward = 0
         return adv_reward
         
     def _agent_reward(self, action: int, vehicle: Vehicle) -> float:
