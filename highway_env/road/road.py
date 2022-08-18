@@ -279,7 +279,6 @@ class RoadNetwork(object):
                     )
         return graph_dict
 
-
 class Road(object):
 
     """A road is a set of lanes, and a set of vehicles driving on these lanes."""

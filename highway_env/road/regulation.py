@@ -81,3 +81,47 @@ class RegulatedRoad(Road):
             if utils.rotated_rectangles_intersect((position_1, 1.5*v1.LENGTH, 0.9*v1.WIDTH, heading_1),
                                                   (position_2, 1.5*v2.LENGTH, 0.9*v2.WIDTH, heading_2)):
                 return True
+
+class CheckRegulatedRoad(Road):
+    YIELDING_COLOR: Tuple[float, float, float] = None
+    REGULATION_FREQUENCY: int = 2
+    YIELD_DURATION: float = 0.
+
+    def __init__(self, network: RoadNetwork = None, vehicles: List[Vehicle] = None, obstacles: List[Obstacle] = None,
+                 np_random: np.random.RandomState = None, record_history: bool = False) -> None:
+        super().__init__(network, vehicles, obstacles, np_random, record_history)
+        self.steps = 0
+
+        # Added attribute
+        self.rule_broken = False
+
+    def step(self, dt: float) -> None:
+        self.steps += 1
+        if self.steps % int(1 / dt / self.REGULATION_FREQUENCY) == 0:
+            self.rule_broken = self.find_conflicts()
+        return super().step(dt)
+
+    def find_conflicts(self) -> None:
+        """Find conflicts"""
+
+        for i in range(len(self.vehicles) - 1):
+            for j in range(i+1, len(self.vehicles)):
+                if self.is_conflict_possible(self.vehicles[i], self.vehicles[j]):
+                    return True
+        return False
+
+    @staticmethod
+    def is_conflict_possible(v1: ControlledVehicle, v2: ControlledVehicle, horizon: int = 3, step: float = 0.25) -> bool:
+        times = np.arange(step, horizon, step)
+        positions_1, headings_1 = v1.predict_trajectory_constant_speed(times)
+        positions_2, headings_2 = v2.predict_trajectory_constant_speed(times)
+
+        for position_1, heading_1, position_2, heading_2 in zip(positions_1, headings_1, positions_2, headings_2):
+            # Fast spherical pre-check
+            if np.linalg.norm(position_2 - position_1) > v1.LENGTH:
+                continue
+
+            # Accurate rectangular check
+            if utils.rotated_rectangles_intersect((position_1, 1.5*v1.LENGTH, 0.9*v1.WIDTH, heading_1),
+                                                  (position_2, 1.5*v2.LENGTH, 0.9*v2.WIDTH, heading_2)):
+                return True

@@ -7,7 +7,7 @@ import math
 from highway_env import utils
 from highway_env.envs.common.abstract import AbstractEnv, MultiAgentWrapper
 from highway_env.road.lane import LineType, StraightLane, CircularLane, AbstractLane
-from highway_env.road.regulation import RegulatedRoad
+from highway_env.road.regulation import RegulatedRoad, CheckRegulatedRoad
 from highway_env.road.road import RoadNetwork
 from highway_env.vehicle.kinematics import Vehicle
 from highway_env.vehicle.controller import ControlledVehicle
@@ -30,7 +30,8 @@ class AdvIntersectionEnv(AbstractEnv):
     DISTANCE_BETWEEN_ROADS = 5
     # Added Attributes
     ZERO_SUM_REWARDS = False
-    FAILMAKER_ADVRL = True
+    FAILMAKER_ADVRL = False
+    CHECK_REG_ROAD = True
 
     @classmethod
     def default_config(cls) -> dict:
@@ -225,7 +226,10 @@ class AdvIntersectionEnv(AbstractEnv):
             net.add_lane("il" + str((corner - 1) % self.NUM_ROADS), "o" + str((corner - 1) % self.NUM_ROADS),
                          StraightLane(end, start, line_types=[n, c], priority=priority, speed_limit=10))
 
-        road = RegulatedRoad(network=net, np_random=self.np_random, record_history=self.config["show_trajectories"])
+        if self.CHECK_REG_ROAD:
+            road = CheckRegulatedRoad(network=net, np_random=self.np_random, record_history=self.config["show_trajectories"])
+        else:
+            road = RegulatedRoad(network=net, np_random=self.np_random, record_history=self.config["show_trajectories"])
         self.road = road
 
     def _make_hash_road(self) -> None:
