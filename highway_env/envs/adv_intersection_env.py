@@ -2,6 +2,7 @@ from typing import Dict, Tuple
 
 from gym.envs.registration import register
 import numpy as np
+import math
 
 from highway_env import utils
 from highway_env.envs.common.abstract import AbstractEnv, MultiAgentWrapper
@@ -27,8 +28,10 @@ class AdvIntersectionEnv(AbstractEnv):
     MIN_DIST_VEHICLES = 2
     MAX_DIST_VEHICLES = 10
     DISTANCE_BETWEEN_ROADS = 5
+    # Added Attributes
     ZERO_SUM_REWARDS = False
-    
+    FAILMAKER_ADVRL = True
+
     @classmethod
     def default_config(cls) -> dict:
         config = super().default_config()
@@ -80,7 +83,28 @@ class AdvIntersectionEnv(AbstractEnv):
         # print("Total reward:", total_reward)
         return total_reward
 
+    def calc_adv_reward(self, vehicle: Vehicle) -> float:
+        """Calculate the adversarial reward = 
+        the current contribution of NPC / the total previous contributions"""
+        for vehicle in self.controlled_vehicles:
+            if vehicle.ego:
+                ego_vehicle = vehicle
+                break
+        # Calculate total contribution
+        total_contr = 0
+        for position in vehicle.prev_positions:
+            prev_dist = np.linalg.norm(position - ego_vehicle.position)
+            total_contr += math.exp(-2*prev_dist)
+        # Calculate current contribution
+        dist = np.linalg.norm(vehicle.position - ego_vehicle.position)
+        contr = math.exp(-2*dist)
+        adv_reward = contr/total_contr
+        return adv_reward
+
     def _agent_reward(self, action: int, vehicle: Vehicle) -> float:
+        # Add the previous positions of the vehicle
+        vehicle.prev_positions.append(vehicle.position)
+
         scaled_speed = utils.lmap(vehicle.speed, self.config["reward_speed_range"], [0, 1])
         reward = self.config["collision_reward"] * vehicle.crashed \
                  + self.config["high_speed_reward"] * (vehicle.speed - self.config["speed_to_reward"])
@@ -95,6 +119,11 @@ class AdvIntersectionEnv(AbstractEnv):
                 # If NPC, then return the adversarial reward
                 return -reward
             print("Ego rewards: ", reward)
+        if self.FAILMAKER_ADVRL:
+            if vehicle.ego is False:
+                pers_reward = reward
+                adv_reward = self.calc_adv_reward(vehicle)
+                reward = pers_reward + 0.95 * adv_reward
         return reward
 
     def _is_terminal(self) -> bool:
@@ -110,9 +139,7 @@ class AdvIntersectionEnv(AbstractEnv):
             or self.has_arrived(vehicle)
 
     def _info(self, obs: np.ndarray, action: int) -> dict:
-        """
-        Return a dictionary of additional information
-        """
+        """Return a dictionary of additional information"""
         info = super()._info(obs, action)
         info["agents_rewards"] = tuple(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles)
         info["agents_dones"] = tuple(self._agent_is_terminal(vehicle) for vehicle in self.controlled_vehicles)

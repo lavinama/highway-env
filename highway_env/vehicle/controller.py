@@ -225,6 +225,11 @@ class MDPVehicle(ControlledVehicle):
         :param target_speed: the speed it is tracking
         :param target_speeds: the discrete list of speeds the vehicle is able to track, through faster/slower actions
         :param route: the planned route of the vehicle, to handle intersections
+
+        # Added attributes
+        :param ego: whether the vehicle is the ego vehicle or not
+        :param name: the name of the car in string format
+        :param prev_positions: the previous positions of the vehicle
         """
         super().__init__(road, position, heading, speed, target_lane_index, target_speed, route)
         self.target_speeds = np.array(target_speeds) if target_speeds is not None else self.DEFAULT_TARGET_SPEEDS
@@ -234,6 +239,7 @@ class MDPVehicle(ControlledVehicle):
         # Added attributes
         self.ego = False
         self.name = ""
+        self.prev_positions = []
 
     def act(self, action: Union[dict, str] = None) -> None:
         """
