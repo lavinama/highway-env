@@ -111,6 +111,14 @@ class AdvIntersectionEnv(AbstractEnv):
         return adv_reward
         
     def _agent_reward(self, action: int, vehicle: Vehicle) -> float:
+        if self.config["zero_sum_rewards"]:
+            # r_npc = - r_ego
+            if vehicle.ego is False:
+                # Look for the ego_vehicle to calculate r_ego
+                for v in self.controlled_vehicles:
+                    if v.ego is True:
+                        vehicle = v
+                        break
         # Add the previous positions of the vehicle
         vehicle.prev_positions.append(vehicle.position)
 
@@ -122,12 +130,6 @@ class AdvIntersectionEnv(AbstractEnv):
         if self.config["normalize_reward"]:
             reward = utils.lmap(reward, [self.config["collision_reward"], self.config["arrived_reward"]], [0, 1])
         reward = 0 if not vehicle.on_road else reward
-        if self.config["zero_sum_rewards"]:
-            # r_npc = - r_ego
-            if vehicle.ego is False:
-                # print("NPC reward: ", -reward)
-                return -reward
-            # print("Ego rewards: ", reward)
         if self.config["failmaker_advrl"]:
             # reward function of FailMaker_AdvRL
             if vehicle.ego is False:
