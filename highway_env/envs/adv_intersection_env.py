@@ -63,27 +63,27 @@ class AdvIntersectionEnv(AbstractEnv):
             "screen_height": 600,
             "centering_position": [0.5, 0.5],
             "scaling": 5.5 * 1.3,
-            "scaling_factor": 1,
             "collision_reward": -100,
             "high_speed_reward": 1,
             "speed_to_reward": 3.5,
-            "arrived_reward": 30,
+            "arrived_reward": 50,
             "rule_break_reward": -50,
             "reward_speed_range": [7.0, 9.0],
             "normalize_reward": False,
             "offroad_terminal": False,
             "zero_sum_rewards": False,
             "failmaker_advrl": False,
+            "scaling_factor": 1,
             "check_reg_road": False,
         })
         return config
 
     def _reward(self, action: int) -> float:
         # Cooperative multi-agent reward
-        total_reward = sum(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles) \
+        avg_reward = sum(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles) \
                / len(self.controlled_vehicles)
-        # print("Total reward:", total_reward)
-        return total_reward
+        # print("Average reward:", avg_reward)
+        return avg_reward
 
     def calc_adv_reward(self, vehicle: Vehicle) -> float:
         """Calculate the adversarial reward = 

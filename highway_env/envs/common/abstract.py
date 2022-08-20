@@ -106,7 +106,7 @@ class AbstractEnv(gym.Env):
             "render_agent": True,
             "offscreen_rendering": os.environ.get("OFFSCREEN_RENDERING", "0") == "1",
             "manual_control": False,
-            "real_time_rendering": False
+            "real_time_rendering": False,
         }
 
     def seed(self, seed: int = None) -> List[int]:
