@@ -111,7 +111,7 @@ class AdvIntersectionEnv(AbstractEnv):
         return adv_reward
         
     def _agent_reward(self, action: int, vehicle: Vehicle) -> float:
-        if self.config["zero_sum_rewards"]:
+        if self.config["zero_sum_rewards"] or self.config["check_reg_road"]:
             # r_npc = - r_ego
             if vehicle.ego is False:
                 # Look for the ego_vehicle to calculate r_ego
@@ -139,9 +139,9 @@ class AdvIntersectionEnv(AbstractEnv):
         if self.config["check_reg_road"]:
             # reward function encourages to break rules of the road
             if vehicle.ego is False:
-                pers_reward = reward
+                ego_reward = reward
                 adv_reward = self.calc_rule_break(vehicle)
-                reward = - pers_reward + self.config["scaling_factor"] * adv_reward
+                reward = - ego_reward + self.config["scaling_factor"] * adv_reward
         return reward
 
     def _is_terminal(self) -> bool:
