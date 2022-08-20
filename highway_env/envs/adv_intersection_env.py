@@ -125,9 +125,9 @@ class AdvIntersectionEnv(AbstractEnv):
         if self.config["zero_sum_rewards"]:
             # r_npc = - r_ego
             if vehicle.ego is False:
-                print("NPC reward: ", -reward)
+                # print("NPC reward: ", -reward)
                 return -reward
-            print("Ego rewards: ", reward)
+            # print("Ego rewards: ", reward)
         if self.config["failmaker_advrl"]:
             # reward function of FailMaker_AdvRL
             if vehicle.ego is False:
@@ -313,7 +313,7 @@ class AdvIntersectionEnv(AbstractEnv):
 
     def _make_vehicles(self, n_vehicles: int = 10) -> None:
         """
-        Populate a road with several vehicles on the highway and on the merging lane
+        Populate a road with several vehicles on the intersection
 
         :return: the ego-vehicle
         """
