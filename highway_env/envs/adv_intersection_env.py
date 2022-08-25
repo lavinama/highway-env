@@ -394,6 +394,7 @@ class AdvIntersectionEnv(AbstractEnv):
         route = self.np_random.choice(range(self.NUM_ROADS), size=2, replace=False)
         route[1] = (route[0] + 2) % self.NUM_ROADS if go_straight else route[1]
         vehicle_type = utils.class_from_path(self.config["other_vehicles_type"])
+        print("Vehicle Type: ", vehicle_type)
         vehicle = vehicle_type.make_on_lane(self.road, ("o" + str(route[0]), "ir" + str(route[0]), 0),
                                             longitudinal=longitudinal + 5 + self.np_random.randn() * position_deviation,
                                             speed=8 + self.np_random.randn() * speed_deviation)

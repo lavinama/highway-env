@@ -209,8 +209,10 @@ class AbstractEnv(gym.Env):
         :param action: the action performed by the ego-vehicle
         :return: a tuple (observation, reward, terminal, info)
         """
-        if self.road is None or self.vehicle is None:
-            raise NotImplementedError("The road and vehicle must be initialized in the environment implementation")
+        if self.road is None:
+            raise NotImplementedError("The road must be initialized in the environment implementation")
+        if self.vehicle is None:
+            raise NotImplementedError("The vehicle must be initialized in the environment implementation")
 
         self.steps += 1
         self._simulate(action)
