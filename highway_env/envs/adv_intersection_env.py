@@ -416,7 +416,7 @@ class AdvIntersectionEnv(AbstractEnv):
             else:
                 ego_vehicle.ego = False
                 ego_vehicle.name = "npc_" + str(ego_id)
-                print(ego_vehicle.name)
+                # print(ego_vehicle.name)
                 self.npcs.append(ego_vehicle)
 
             self.road.vehicles.append(ego_vehicle)
