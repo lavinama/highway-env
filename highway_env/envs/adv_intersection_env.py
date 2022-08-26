@@ -90,13 +90,12 @@ class AdvIntersectionEnv(AbstractEnv):
         """Calculate the failmaker reward"""
         # Calculate current contribution of all vehicles
         current_contributions = []
-        for v in self.controlled_vehicles:
-            
+        for v in self.npcs:
             current_contributions.append(self.current_contribution(v))
         # Find vehicle with maximum contribution
         i_max = self.max_contr_vehicle()
         # Calculate adversarial reward of max contr vehicle
-        self.adv_reward_max = self.calc_adv_reward_max_contr(self.controlled_vehicles[i_max])
+        self.adv_reward_max = self.calc_adv_reward_max_contr(self.npcs[i_max])
         # Calculate adversarial reward of current npc
         adv_reward = self.calc_adv_reward(vehicle)
         return adv_reward
@@ -112,7 +111,7 @@ class AdvIntersectionEnv(AbstractEnv):
         :return: the index of the list of controlled vehicles which contains that maximum"""
         max = 0
         i_max = 0
-        for i, vehicle in enumerate(self.controlled_vehicles):
+        for i, vehicle in enumerate(self.npcs):
             for contr in vehicle.all_contr:
                 if contr > max:
                     max = contr
@@ -134,7 +133,8 @@ class AdvIntersectionEnv(AbstractEnv):
     def calc_adv_reward(self, vehicle: Vehicle) -> float:
         """Calculate the adversarial reward of the current npc"""
         w_k = self.calc_w_k_npc(vehicle)
-        adv_reward = w_k * self.adv_reward_max * vehicle.current_contr / 
+        adv_reward = w_k * self.adv_reward_max * vehicle.current_contr / self.adv_reward_max
+        return adv_reward
     
     
     def calc_rule_break(self, vehicle: Vehicle) -> float:
@@ -148,11 +148,8 @@ class AdvIntersectionEnv(AbstractEnv):
         if self.config["zero_sum_rewards"] or self.config["check_reg_road"]:
             # r_npc = - r_ego
             if vehicle.ego is False:
-                # Look for the ego_vehicle to calculate r_ego
-                for v in self.controlled_vehicles:
-                    if v.ego is True:
-                        vehicle = v
-                        break
+                vehicle = self.ego_vehicle
+                
         # Add the previous positions of the vehicle
         vehicle.prev_positions.append(vehicle.position)
 
