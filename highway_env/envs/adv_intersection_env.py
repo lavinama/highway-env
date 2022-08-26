@@ -100,12 +100,18 @@ class AdvIntersectionEnv(AbstractEnv):
         adv_reward = self.calc_adv_reward(vehicle)
         return adv_reward
 
+    def current_contribution(self, vehicle: MDPVehicle) -> float:
+        dist = np.linalg.norm(vehicle.position - self.ego_vehicle.position)
+        vehicle.current_contr = math.exp(-2*dist)
+        vehicle.all_contr.append(vehicle.current_contr)
+        return vehicle.current_contr
+    """
     def current_contribution(self, vehicle: MDPVehicle, ego_vehicle: Vehicle) -> float:
         dist = np.linalg.norm(vehicle.position - ego_vehicle.position)
         vehicle.current_contr = math.exp(-2*dist)
         vehicle.all_contr.append(vehicle.current_contr)
         return vehicle.current_contr
-
+    """
     def max_contr_vehicle(self) -> int:
         """Find the vehicle with the highest contribution for all time steps t
         :return: the index of the list of controlled vehicles which contains that maximum"""
@@ -135,7 +141,6 @@ class AdvIntersectionEnv(AbstractEnv):
         w_k = self.calc_w_k_npc(vehicle)
         adv_reward = w_k * self.adv_reward_max * vehicle.current_contr / self.adv_reward_max
         return adv_reward
-    
     
     def calc_rule_break(self, vehicle: Vehicle) -> float:
         if self.road.rule_broken:
