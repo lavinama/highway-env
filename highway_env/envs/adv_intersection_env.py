@@ -80,7 +80,7 @@ class AdvIntersectionEnv(AbstractEnv):
 
     def _reward(self, action: int) -> float:
         # Cooperative multi-agent reward
-        total_reward = sum(self._agent_reward(action, vehicle) for vehicle in zip(self.ego_vehicle, self.npcs))
+        total_reward = sum(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles)
         avg_reward = total_reward \
                / len(self.controlled_vehicles)
         # print("Average reward:", avg_reward)
@@ -186,6 +186,9 @@ class AdvIntersectionEnv(AbstractEnv):
         return vehicle.crashed \
             or self.steps >= self.config["duration"] * self.config["policy_frequency"] \
             or self.has_arrived(vehicle)
+    
+    def _exceed_duration_episode(self, vehicle: Vehicle) -> bool:
+        return self.steps >= self.config["duration"] * self.config["policy_frequency"]
 
     def _info(self, obs: np.ndarray, action: int) -> dict:
         """Return a dictionary of additional information"""
@@ -194,6 +197,7 @@ class AdvIntersectionEnv(AbstractEnv):
         info["agents_dones"] = tuple(self._agent_is_terminal(vehicle) for vehicle in self.controlled_vehicles)
         info["agents_crashed"] = tuple(vehicle.crashed for vehicle in self.controlled_vehicles)
         info["agents_arrived"] = tuple(self.has_arrived(vehicle) for vehicle in self.controlled_vehicles)
+        info["duration_exceeded"] = tuple(self._exceed_duration_episode(vehicle) for vehicle in self.controlled_vehicles)
         info["agent_names"] = tuple(vehicle.name for vehicle in self.controlled_vehicles)
         return info
 
