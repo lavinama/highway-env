@@ -230,6 +230,8 @@ class MDPVehicle(ControlledVehicle):
         :param ego: whether the vehicle is the ego vehicle or not
         :param name: the name of the car in string format
         :param prev_positions: the previous positions of the vehicle
+        :param current_contr: the current contribution of the vehicle to the failure of the ego at time t
+        :param all_contr: all of the contributions of the vehicle for all time steps t
         """
         super().__init__(road, position, heading, speed, target_lane_index, target_speed, route)
         self.target_speeds = np.array(target_speeds) if target_speeds is not None else self.DEFAULT_TARGET_SPEEDS
@@ -240,6 +242,8 @@ class MDPVehicle(ControlledVehicle):
         self.ego = False
         self.name = ""
         self.prev_positions = []
+        self.current_contr = 0
+        self.all_contr = []
 
     def act(self, action: Union[dict, str] = None) -> None:
         """

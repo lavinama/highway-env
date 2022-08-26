@@ -10,7 +10,7 @@ from highway_env.road.lane import LineType, StraightLane, CircularLane, Abstract
 from highway_env.road.regulation import RegulatedRoad, CheckRegulatedRoad
 from highway_env.road.road import RoadNetwork
 from highway_env.vehicle.kinematics import Vehicle
-from highway_env.vehicle.controller import ControlledVehicle
+from highway_env.vehicle.controller import ControlledVehicle, MDPVehicle
 
 
 class AdvIntersectionEnv(AbstractEnv):
@@ -28,7 +28,7 @@ class AdvIntersectionEnv(AbstractEnv):
     MIN_DIST_VEHICLES = 2
     MAX_DIST_VEHICLES = 10
     DISTANCE_BETWEEN_ROADS = 5
-
+    
     @classmethod
     def default_config(cls) -> dict:
         config = super().default_config()
@@ -80,29 +80,63 @@ class AdvIntersectionEnv(AbstractEnv):
 
     def _reward(self, action: int) -> float:
         # Cooperative multi-agent reward
-        avg_reward = sum(self._agent_reward(action, vehicle) for vehicle in self.controlled_vehicles) \
+        total_reward = sum(self._agent_reward(action, vehicle) for vehicle in zip(self.ego_vehicle, self.npcs))
+        avg_reward = total_reward \
                / len(self.controlled_vehicles)
         # print("Average reward:", avg_reward)
         return avg_reward
 
-    def calc_adv_reward(self, vehicle: Vehicle) -> float:
-        """Calculate the adversarial reward = 
-        the current contribution of NPC / the total previous contributions"""
-        for vehicle in self.controlled_vehicles:
-            if vehicle.ego:
-                ego_vehicle = vehicle
-                break
-        # Calculate total contribution
-        total_contr = 0
-        for position in vehicle.prev_positions:
-            prev_dist = np.linalg.norm(position - ego_vehicle.position)
-            total_contr += math.exp(-2*prev_dist)
-        # Calculate current contribution
-        dist = np.linalg.norm(vehicle.position - ego_vehicle.position)
-        contr = math.exp(-2*dist)
-        adv_reward = contr/total_contr
+    def calc_failmaker_reward(self, vehicle: Vehicle) -> float:
+        """Calculate the failmaker reward"""
+        # Calculate current contribution of all vehicles
+        current_contributions = []
+        for v in self.controlled_vehicles:
+            
+            current_contributions.append(self.current_contribution(v))
+        # Find vehicle with maximum contribution
+        i_max = self.max_contr_vehicle()
+        # Calculate adversarial reward of max contr vehicle
+        self.adv_reward_max = self.calc_adv_reward_max_contr(self.controlled_vehicles[i_max])
+        # Calculate adversarial reward of current npc
+        adv_reward = self.calc_adv_reward(vehicle)
         return adv_reward
 
+    def current_contribution(self, vehicle: MDPVehicle, ego_vehicle: Vehicle) -> float:
+        dist = np.linalg.norm(vehicle.position - ego_vehicle.position)
+        vehicle.current_contr = math.exp(-2*dist)
+        vehicle.all_contr.append(vehicle.current_contr)
+        return vehicle.current_contr
+
+    def max_contr_vehicle(self) -> int:
+        """Find the vehicle with the highest contribution for all time steps t
+        :return: the index of the list of controlled vehicles which contains that maximum"""
+        max = 0
+        i_max = 0
+        for i, vehicle in enumerate(self.controlled_vehicles):
+            for contr in vehicle.all_contr:
+                if contr > max:
+                    max = contr
+                    i_max = i
+        return i_max
+    
+    def calc_adv_reward_max_contr(self, vehicle: MDPVehicle) -> int:
+        """Calculate the adversarial reward of the agent with the maximum contribution"""
+        # Calculate total contribution
+        total_contr = sum(vehicle.all_contr)
+        return vehicle.current_contr/total_contr
+
+    def calc_w_k_npc(self, vehicle: Vehicle) -> int:
+        """Calculate w_k of the npc vehicle"""
+        # TODO: Implement a method to find k
+        # TODO: Design a non-increasing function w(k) 
+        return 1
+
+    def calc_adv_reward(self, vehicle: Vehicle) -> float:
+        """Calculate the adversarial reward of the current npc"""
+        w_k = self.calc_w_k_npc(vehicle)
+        adv_reward = w_k * self.adv_reward_max * vehicle.current_contr / 
+    
+    
     def calc_rule_break(self, vehicle: Vehicle) -> float:
         if self.road.rule_broken:
             adv_reward = self.config["rule_break_reward"]
@@ -134,7 +168,7 @@ class AdvIntersectionEnv(AbstractEnv):
             # reward function of FailMaker_AdvRL
             if vehicle.ego is False:
                 pers_reward = reward
-                adv_reward = self.calc_adv_reward(vehicle)
+                adv_reward = self.calc_failmaker_reward(vehicle)
                 reward = pers_reward + self.config["scaling_factor"] * adv_reward
         if self.config["check_reg_road"]:
             # reward function encourages to break rules of the road
@@ -337,6 +371,8 @@ class AdvIntersectionEnv(AbstractEnv):
 
         # Controlled vehicles
         self.controlled_vehicles = []
+        self.npcs = []
+        self.ego_vehicle = None
         offsets = np.zeros(self.NUM_ROADS)
         for ego_id in range(0, self.config["controlled_vehicles"]):
             ego_lane = self.road.network.get_lane(
@@ -370,9 +406,11 @@ class AdvIntersectionEnv(AbstractEnv):
             if ego_id == 0:
                 ego_vehicle.ego = True
                 ego_vehicle.name = "ego"
+                self.ego_vehicle = ego_vehicle
             else:
                 ego_vehicle.ego = False
                 ego_vehicle.name = "npc_" + str(ego_id)
+                self.npcs.append(ego_vehicle)
 
             self.road.vehicles.append(ego_vehicle)
             self.controlled_vehicles.append(ego_vehicle)
@@ -381,6 +419,8 @@ class AdvIntersectionEnv(AbstractEnv):
                 if v is not ego_vehicle and np.linalg.norm(v.position - ego_vehicle.position) < 20:
                     self.road.vehicles.remove(v)
             """
+        if self.config["failmaker_advrl"]:
+            self.adv_reward_max = 0
 
     def _spawn_vehicle(self,
                        longitudinal: float = 0,
