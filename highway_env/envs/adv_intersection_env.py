@@ -105,13 +105,7 @@ class AdvIntersectionEnv(AbstractEnv):
         vehicle.current_contr = math.exp(-2*dist)
         vehicle.all_contr.append(vehicle.current_contr)
         return vehicle.current_contr
-    """
-    def current_contribution(self, vehicle: MDPVehicle, ego_vehicle: Vehicle) -> float:
-        dist = np.linalg.norm(vehicle.position - ego_vehicle.position)
-        vehicle.current_contr = math.exp(-2*dist)
-        vehicle.all_contr.append(vehicle.current_contr)
-        return vehicle.current_contr
-    """
+
     def max_contr_vehicle(self) -> int:
         """Find the vehicle with the highest contribution for all time steps t
         :return: the index of the list of controlled vehicles which contains that maximum"""
@@ -178,6 +172,8 @@ class AdvIntersectionEnv(AbstractEnv):
                 ego_reward = reward
                 adv_reward = self.calc_rule_break(vehicle)
                 reward = - ego_reward + self.config["scaling_factor"] * adv_reward
+        if self.config["zero_sum_rewards"] and vehicle.ego is False:
+            reward = - reward
         return reward
 
     def _is_terminal(self) -> bool:
