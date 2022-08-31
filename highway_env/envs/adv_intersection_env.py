@@ -124,16 +124,9 @@ class AdvIntersectionEnv(AbstractEnv):
         total_contr = sum(vehicle.all_contr)
         return vehicle.current_contr/total_contr
 
-    def calc_w_k_npc(self, vehicle: Vehicle) -> int:
-        """Calculate w_k of the npc vehicle"""
-        # TODO: Implement a method to find k
-        # TODO: Design a non-increasing function w(k) 
-        return 1
-
     def calc_adv_reward(self, vehicle: Vehicle) -> float:
         """Calculate the adversarial reward of the current npc"""
-        w_k = self.calc_w_k_npc(vehicle)
-        adv_reward = w_k * self.adv_reward_max * vehicle.current_contr / self.adv_reward_max
+        adv_reward = self.adv_reward_max * vehicle.current_contr / self.adv_reward_max
         return adv_reward
     
     def calc_rule_break(self, vehicle: Vehicle) -> float:
